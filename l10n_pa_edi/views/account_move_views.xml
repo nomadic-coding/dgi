@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_move_form_dgi" model="ir.ui.view">
+        <field name="name">account.move.form.dgi</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_move_form" />
+        <field name="arch" type="xml">
+            <!-- Make form readonly when canceled in DGI -->
+            <xpath expr="//form" position="attributes">
+                <attribute name="readonly">dgi_status == 'anulado'</attribute>
+            </xpath>
+
+            <!-- Add Send to DGI button in header (only show if auto-send is disabled) -->
+            <xpath expr="//form/header" position="inside">
+                <button name="action_send_to_dgi" string="Send to DGI" type="object" class="btn-primary"
+                        invisible="state != 'posted' or dgi_sent or move_type not in ('out_invoice', 'out_refund') or journal_id.dgi_auto_send_on_post"
+                        help="Send electronic invoice to DGI Panama manually" />
+
+                <button name="action_download_efactura" string="Download E-Factura (PDF)" type="object"
+                        class="btn-secondary" invisible="dgi_status != 'procesado'"
+                        help="Download the electronic invoice PDF from DGI" />
+                <button name="action_download_efactura_xml" string="Download XML" type="object" class="btn-secondary"
+                        invisible="dgi_status != 'procesado'" help="Download the electronic invoice XML from DGI" />
+            </xpath>
+
+            <!-- Hide credit note button when invoice is sent to DGI -->
+            <xpath expr="//button[@name='action_reverse']" position="attributes">
+                <attribute name="invisible">not show_credit_note_button</attribute>
+            </xpath>
+
+            <!-- Add DGI Status to header right group -->
+            <xpath expr="//group[@id='header_right_group']" position="inside">
+                <field name="dgi_sent" invisible="1" />
+                <field name="show_credit_note_button" invisible="1" />
+                <label for="dgi_status" string="DGI Status"
+                       invisible="not dgi_sent or move_type not in ('out_invoice', 'out_refund')"
+                       style="font-weight:bold;" />
+                <field name="dgi_status" widget="badge" nolabel="1" decoration-success="dgi_status == 'procesado'"
+                       decoration-danger="dgi_status == 'rechazado'"
+                       decoration-warning="dgi_status and dgi_status not in ['procesado', 'rechazado', 'anulado']"
+                       decoration-muted="dgi_status == 'anulado'"
+                       invisible="not dgi_sent or move_type not in ('out_invoice', 'out_refund')" />
+            </xpath>
+
+
+            <!-- Add DGI API Logs smart button -->
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_view_hka_api_logs" type="object" class="oe_stat_button" icon="fa-list"
+                        invisible="not hka_api_log_count">
+                    <field name="hka_api_log_count" widget="statinfo" string="DGI Logs" />
+                </button>
+            </xpath>
+
+
+            <!-- Add DGI tab -->
+            <xpath expr="//notebook" position="inside">
+                <page string="Electronic Invoice (DGI)" name="dgi_electronic"
+                      invisible="move_type not in ('out_invoice', 'out_refund')">
+
+                    <group string="Document Settings">
+                        <group>
+                            <field name="hka_tipo_emision" />
+                            <field name="hka_tipo_documento" />
+                            <field name="hka_tipo_documento_manual"
+                                   help="If checked, the document type will not be auto-computed based on invoice type. Uncheck to enable auto-computation." />
+                            <field name="hka_naturaleza_operacion" />
+                            <field name="hka_tipo_operacion" />
+                            <field name="hka_destino_operacion" />
+                            <field name="hka_forma_pago" />
+                        </group>
+                        <group>
+                            <field name="hka_tipo_sucursal" />
+                            <field name="hka_formato_cafe" />
+                            <field name="hka_entrega_cafe" />
+                            <field name="hka_envio_contenedor" />
+                            <field name="hka_proceso_generacion" />
+                        </group>
+                    </group>
+
+                    <group string="DGI Response" invisible="not dgi_sent">
+                        <group>
+                            <field name="dgi_sent" widget="boolean" />
+                            <field name="dgi_sent_date" />
+                            <field name="dgi_status" decoration-success="dgi_status == 'procesado'"
+                                   decoration-danger="dgi_status == 'rechazado'"
+                                   decoration-muted="dgi_status == 'anulado'" />
+                            <field name="dgi_cufe" />
+                        </group>
+                        <group>
+                            <field name="dgi_fecha_recepcion" />
+                            <field name="dgi_protocolo_autorizacion" />
+                            <field name="dgi_qr" widget="text" />
+                        </group>
+                    </group>
+
+                    <group string="Error Information" invisible="not dgi_error_message">
+                        <field name="dgi_error_message" widget="text" readonly="1" />
+                    </group>
+
+                    <div class="alert alert-success" role="alert" invisible="not dgi_sent">
+                        <p><strong>✓ Document Sent Successfully</strong></p>
+                        <p>This document has been successfully sent to DGI Panama.</p>
+                        <p>CUFE:
+                            <field name="dgi_cufe" readonly="1" nolabel="1" />
+                        </p>
+                    </div>
+
+                    <div class="alert alert-info" role="alert" invisible="dgi_sent or state != 'posted'">
+                        <p><strong>Ready to Send</strong></p>
+                        <p>Click the "Send to DGI" button to transmit this invoice to DGI Panama.</p>
+                    </div>
+
+                    <div class="alert alert-warning" role="alert" invisible="state == 'posted'">
+                        <p><strong>Invoice Not Posted</strong></p>
+                        <p>Post the invoice before sending it to DGI.</p>
+                    </div>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Add DGI Status to invoice list view -->
+    <record id="view_invoice_tree_dgi" model="ir.ui.view">
+        <field name="name">account.move.tree.dgi</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_invoice_tree" />
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='status_in_payment']" position="after">
+                <field name="dgi_status" string="DGI Status" widget="badge"
+                       decoration-success="dgi_status == 'procesado'" decoration-danger="dgi_status == 'rechazado'"
+                       decoration-warning="dgi_status and dgi_status not in ['procesado', 'rechazado', 'anulado']"
+                       decoration-muted="dgi_status == 'anulado'" />
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

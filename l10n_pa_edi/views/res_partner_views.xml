@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Add DGI Tab to Partner Form -->
+    <record id="view_partner_form_dgi" model="ir.ui.view">
+        <field name="name">res.partner.form.dgi</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form" />
+        <field name="arch" type="xml">
+            <!-- Add DGI tab -->
+            <xpath expr="//notebook" position="inside">
+                <page string="DGI Panama" name="dgi_panama">
+                    <field name="dgi_country_code" invisible="1" />
+
+                    <group string="Electronic Invoice Classification">
+                        <group>
+                            <field name="dgi_tipo_cliente_fe" readonly="1" 
+                                   decoration-success="dgi_tipo_cliente_fe == '01'"
+                                   decoration-info="dgi_tipo_cliente_fe == '02'"
+                                   decoration-warning="dgi_tipo_cliente_fe in ['03', '04']"/>
+                            <field name="dgi_tipo_contribuyente" readonly="1" 
+                                   invisible="dgi_tipo_cliente_fe == '04'"/>
+                        </group>
+                    </group>
+
+                    <!-- For Panama Taxpayers (01, 03) -->
+                    <group string="RUC Information" invisible="dgi_tipo_cliente_fe not in ['01', '02', '03']">
+                        <group>
+                            <field name="dgi_tipo_ruc" />
+                            <field name="dgi_ruc" placeholder="Enter RUC number" />
+                            <field name="dgi_dv" placeholder="DV" />
+                            <button name="action_validate_ruc" string="Validate RUC" type="object" class="btn-primary"
+                                    invisible="not dgi_ruc" help="Validate RUC with DGI Panama" />
+                        </group>
+                        <group>
+                            <field name="dgi_ruc_validated" widget="boolean" />
+                            <field name="dgi_ruc_validation_date" invisible="not dgi_ruc_validated" />
+                            <field name="vat" string="VAT/Tax ID" readonly="1" invisible="not dgi_ruc_validated" />
+                        </group>
+                    </group>
+
+                    <group string="Validated Information" invisible="not dgi_ruc_validated or dgi_tipo_cliente_fe not in ['01', '02', '03']">
+                        <group>
+                            <field name="dgi_razon_social" readonly="1" />
+                        </group>
+                        <group>
+                            <field name="dgi_taxpayer_status" readonly="1" />
+                        </group>
+                    </group>
+
+                    <!-- For Foreign Customers (04) -->
+                    <group string="Foreign Customer Information" invisible="dgi_tipo_cliente_fe != '04'">
+                        <group>
+                            <field name="dgi_tipo_identificacion_extranjero" required="dgi_tipo_cliente_fe == '04'"/>
+                            <field name="vat" string="Identification Number" required="dgi_tipo_cliente_fe == '04'"/>
+                        </group>
+                        <group>
+                            <field name="country_id"/>
+                            <field name="dgi_pais_otro" placeholder="Enter country name if not in catalog"
+                                   invisible="dgi_country_code != 'ZZ'"/>
+                        </group>
+                    </group>
+
+                    <!-- Alerts -->
+                    <div class="alert alert-info" role="alert" 
+                         invisible="dgi_ruc_validated or dgi_tipo_cliente_fe == '04'">
+                        <p><strong>RUC Validation Required</strong></p>
+                        <p>Enter the RUC number and tipo RUC, then click "Validate RUC" button to verify with DGI Panama.</p>
+                    </div>
+
+                    <div class="alert alert-success" role="alert" invisible="not dgi_ruc_validated">
+                        <p><strong>✓ RUC Validated</strong></p>
+                        <p>This partner's RUC has been validated with DGI Panama.</p>
+                    </div>
+
+                    <div class="alert alert-warning" role="alert" 
+                         invisible="dgi_tipo_cliente_fe != '04'">
+                        <p><strong>Foreign Customer</strong></p>
+                        <p>This partner is classified as a foreign customer. Please ensure identification type and number are provided.</p>
+                    </div>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>

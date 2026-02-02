@@ -1,0 +1,78 @@
+id,name,code,state_id:id
+distrito_pa_1_1,BOCAS DEL TORO,1,state_pa_1
+distrito_pa_1_2,CHANGUINOLA,2,state_pa_1
+distrito_pa_1_3,CHIRIQUI GRANDE,3,state_pa_1
+distrito_pa_2_1,AGUADULCE,1,state_pa_2
+distrito_pa_2_2,ANTON,2,state_pa_2
+distrito_pa_2_3,LA PINTADA,3,state_pa_2
+distrito_pa_2_4,NATA,4,state_pa_2
+distrito_pa_2_5,OLA,5,state_pa_2
+distrito_pa_2_6,PENONOME,6,state_pa_2
+distrito_pa_3_1,COLON,1,state_pa_3
+distrito_pa_3_2,CHAGRES,2,state_pa_3
+distrito_pa_3_3,DONOSO,3,state_pa_3
+distrito_pa_3_4,PORTOBELO,4,state_pa_3
+distrito_pa_3_5,SANTA ISABEL,5,state_pa_3
+distrito_pa_4_1,ALANJE,1,state_pa_4
+distrito_pa_4_2,BARU,2,state_pa_4
+distrito_pa_4_3,BOQUERON,3,state_pa_4
+distrito_pa_4_4,BOQUETE,4,state_pa_4
+distrito_pa_4_5,BUGABA,5,state_pa_4
+distrito_pa_4_6,DAVID,6,state_pa_4
+distrito_pa_4_7,DOLEGA,7,state_pa_4
+distrito_pa_4_8,GUALACA,8,state_pa_4
+distrito_pa_4_9,REMEDIOS,9,state_pa_4
+distrito_pa_4_10,RENACIMIENTO,10,state_pa_4
+distrito_pa_4_11,SAN FELIX,11,state_pa_4
+distrito_pa_4_12,SAN LORENZO,12,state_pa_4
+distrito_pa_4_13,TOLE,13,state_pa_4
+distrito_pa_5_1,CHEPIGANA,1,state_pa_5
+distrito_pa_5_2,PINOGANA,2,state_pa_5
+distrito_pa_6_1,CHITRE,1,state_pa_6
+distrito_pa_6_2,LAS MINAS,2,state_pa_6
+distrito_pa_6_3,LOS POZOS,3,state_pa_6
+distrito_pa_6_4,OCU,4,state_pa_6
+distrito_pa_6_5,PARITA,5,state_pa_6
+distrito_pa_6_6,PESE,6,state_pa_6
+distrito_pa_6_7,SANTA MARIA,7,state_pa_6
+distrito_pa_7_1,GUARARE,1,state_pa_7
+distrito_pa_7_2,LAS TABLAS,2,state_pa_7
+distrito_pa_7_3,LOS SANTOS,3,state_pa_7
+distrito_pa_7_4,MACARACAS,4,state_pa_7
+distrito_pa_7_5,PEDASI,5,state_pa_7
+distrito_pa_7_6,POCRI,6,state_pa_7
+distrito_pa_7_7,TONOSI,7,state_pa_7
+distrito_pa_8_2,BALBOA,2,state_pa_8
+distrito_pa_8_5,CHEPO,5,state_pa_8
+distrito_pa_8_6,CHIMAN,6,state_pa_8
+distrito_pa_8_8,PANAMA,8,state_pa_8
+distrito_pa_8_10,SAN MIGUELITO,10,state_pa_8
+distrito_pa_8_11,TABOGA,11,state_pa_8
+distrito_pa_9_1,ATALAYA,1,state_pa_9
+distrito_pa_9_2,CALOBRE,2,state_pa_9
+distrito_pa_9_3,CAÑAZAS,3,state_pa_9
+distrito_pa_9_4,LA MEZA,4,state_pa_9
+distrito_pa_9_5,LAS PALMAS,5,state_pa_9
+distrito_pa_9_6,MONTIJO,6,state_pa_9
+distrito_pa_9_7,RIO DE JESUS,7,state_pa_9
+distrito_pa_9_8,SAN FRANCISCO,8,state_pa_9
+distrito_pa_9_9,SANTA FE,9,state_pa_9
+distrito_pa_9_10,SANTIAGO,10,state_pa_9
+distrito_pa_9_11,SONA,11,state_pa_9
+distrito_pa_9_12,MARIATO,12,state_pa_9
+distrito_pa_10_1,COMARCA KUNA YALA,1,state_pa_10
+distrito_pa_11_1,CEMACO,1,state_pa_11
+distrito_pa_11_2,SAMBU,2,state_pa_11
+distrito_pa_12_1,BESIKO,1,state_pa_12
+distrito_pa_12_2,MIRONO,2,state_pa_12
+distrito_pa_12_3,MUNA,3,state_pa_12
+distrito_pa_12_4,NOLE DUIMA,4,state_pa_12
+distrito_pa_12_5,NURUM,5,state_pa_12
+distrito_pa_12_6,KANKINTU,6,state_pa_12
+distrito_pa_12_7,KUSAPIN,7,state_pa_12
+distrito_pa_13_1,ARRAIJAN,1,state_pa_13
+distrito_pa_13_2,CAPIRA,2,state_pa_13
+distrito_pa_13_3,CHAME,3,state_pa_13
+distrito_pa_13_4,LA CHORRERA,4,state_pa_13
+distrito_pa_13_5,SAN CARLOS,5,state_pa_13
+

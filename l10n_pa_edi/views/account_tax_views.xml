@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_tax_form_hka" model="ir.ui.view">
+        <field name="name">account.tax.form.hka</field>
+        <field name="model">account.tax</field>
+        <field name="inherit_id" ref="account.view_tax_form" />
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='description']" position="after">
+                <field name="hka_tax_code" placeholder="Select HKA tax code for electronic invoicing" />
+                <field name="hka_tax_isc_id" placeholder="Select HKA ISC rate for electronic invoicing"
+                       widget="selection" invisible="hka_tax_code != '04'" required="hka_tax_code == '04'" />
+            </xpath>
+        </field>
+    </record>
+</odoo>

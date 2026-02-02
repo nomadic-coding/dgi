@@ -1,0 +1,6 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_l10n_pa_distrito_user,l10n.pa.distrito.user,model_l10n_pa_distrito,base.group_user,1,0,0,0
+access_l10n_pa_distrito_manager,l10n.pa.distrito.manager,model_l10n_pa_distrito,base.group_system,1,1,1,1
+access_l10n_pa_corregimiento_user,l10n.pa.corregimiento.user,model_l10n_pa_corregimiento,base.group_user,1,0,0,0
+access_l10n_pa_corregimiento_manager,l10n.pa.corregimiento.manager,model_l10n_pa_corregimiento,base.group_system,1,1,1,1
+

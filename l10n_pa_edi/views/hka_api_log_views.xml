@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- List View -->
+    <record id="view_hka_api_log_list" model="ir.ui.view">
+        <field name="name">hka.api.log.list</field>
+        <field name="model">hka.api.log</field>
+        <field name="arch" type="xml">
+            <list string="HKA API Logs" create="false" edit="false">
+                <field name="create_date" string="Date/Time" />
+                <field name="api_method" />
+                <field name="move_id" />
+                <field name="status" decoration-success="status == 'success'" decoration-danger="status == 'error'" />
+                <field name="http_status_code" />
+                <field name="duration_ms" />
+                <field name="company_id" groups="base.group_multi_company" />
+            </list>
+        </field>
+    </record>
+
+    <!-- Form View -->
+    <record id="view_hka_api_log_form" model="ir.ui.view">
+        <field name="name">hka.api.log.form</field>
+        <field name="model">hka.api.log</field>
+        <field name="arch" type="xml">
+            <form string="HKA API Log" create="false" edit="false">
+                <sheet>
+
+                    <widget name="web_ribbon" title="Success" bg_color="bg-success" invisible="status != 'success'" />
+                    <widget name="web_ribbon" title="Error" bg_color="bg-danger" invisible="status != 'error'" />
+                    <group>
+                        <group name="api_info">
+                            <field name="api_method" />
+                            <field name="status" />
+                            <field name="create_date" string="Call Date/Time" />
+                            <field name="http_status_code" />
+                            <field name="duration_ms" />
+                        </group>
+                        <group name="relations">
+                            <field name="move_id" />
+                            <field name="company_id" groups="base.group_multi_company" />
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Request" name="request">
+                            <div class="o_field_text"
+                                 style="white-space: pre-wrap; font-family: monospace; background-color: #f5f5f5; padding: 10px; border-radius: 4px;">
+                                <field name="request_data" nolabel="1" />
+                            </div>
+                        </page>
+                        <page string="Response" name="response">
+                            <div class="o_field_text"
+                                 style="white-space: pre-wrap; font-family: monospace; background-color: #f5f5f5; padding: 10px; border-radius: 4px;">
+                                <field name="response_data" nolabel="1" />
+                            </div>
+                        </page>
+                        <page string="Error" name="error" invisible="not error_message">
+                            <div class="o_field_text"
+                                 style="white-space: pre-wrap; font-family: monospace; background-color: #fff3cd; padding: 10px; border-radius: 4px;">
+                                <field name="error_message" nolabel="1" />
+                            </div>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Search View -->
+    <record id="view_hka_api_log_search" model="ir.ui.view">
+        <field name="name">hka.api.log.search</field>
+        <field name="model">hka.api.log</field>
+        <field name="arch" type="xml">
+            <search string="Search HKA API Logs">
+                <field name="move_id" />
+                <field name="api_method" />
+                <separator />
+                <filter string="Success" name="filter_success" domain="[('status', '=', 'success')]" />
+                <filter string="Error" name="filter_error" domain="[('status', '=', 'error')]" />
+                <filter string="Pending" name="filter_pending" domain="[('status', '=', 'pending')]" />
+                <separator />
+                <filter string="Today" name="filter_today"
+                        domain="[('create_date', '&gt;=', context_today().strftime('%Y-%m-%d'))]" />
+                <filter string="Last 7 Days" name="filter_week"
+                        domain="[('create_date', '&gt;=', (context_today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d'))]" />
+                <filter string="Last 30 Days" name="filter_month"
+                        domain="[('create_date', '&gt;=', (context_today() - datetime.timedelta(days=30)).strftime('%Y-%m-%d'))]" />
+                <group expand="0" string="Group By">
+                    <filter string="API Method" name="group_api_method" context="{'group_by': 'api_method'}" />
+                    <filter string="Status" name="group_status" context="{'group_by': 'status'}" />
+                    <filter string="Invoice" name="group_move" context="{'group_by': 'move_id'}" />
+                    <filter string="Date" name="group_date" context="{'group_by': 'create_date:day'}" />
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_hka_api_log" model="ir.actions.act_window">
+        <field name="name">HKA API Logs</field>
+        <field name="res_model">hka.api.log</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_hka_api_log_search" />
+        <field name="context">{'search_default_filter_week': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_empty_folder">
+                No HKA API calls logged yet
+            </p>
+            <p>
+                This view shows all API calls made to The Factory HKA for Panama DGI electronic invoicing.
+                Each entry includes request/response data, status, and timing information.
+            </p>
+        </field>
+    </record>
+
+    <!-- Menu -->
+    <menuitem id="menu_hka_api_log" name="HKA API Logs" parent="account.menu_finance_configuration"
+              action="action_hka_api_log" sequence="110" groups="account.group_account_manager" />
+
+
+</odoo>

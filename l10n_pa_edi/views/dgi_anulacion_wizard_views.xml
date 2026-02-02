@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_dgi_anulacion_wizard_form" model="ir.ui.view">
+        <field name="name">dgi.anulacion.wizard.form</field>
+        <field name="model">dgi.anulacion.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Cancel Invoice in DGI">
+                <group>
+                    <group>
+                        <field name="move_id" invisible="1" />
+                        <field name="codigo_sucursal_emisor" />
+                        <field name="numero_documento_fiscal" />
+                        <field name="punto_facturacion_fiscal" />
+                    </group>
+                    <group>
+                        <field name="tipo_documento" />
+                        <field name="tipo_emision" />
+                    </group>
+                </group>
+                <group>
+                    <field name="motivo_anulacion" 
+                           placeholder="Enter the reason for canceling this invoice (minimum 10 characters, maximum 500 characters)..." 
+                           nolabel="0" />
+                    <div class="text-muted" style="padding-left: 110px; padding-top: 5px;">
+                        <small>Minimum 10 characters, maximum 500 characters</small>
+                    </div>
+                </group>
+                <footer>
+                    <button string="Cancel Invoice" name="action_anular" type="object" class="btn-primary" />
+                    <button string="Cancel" class="btn-secondary" special="cancel" />
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>
+

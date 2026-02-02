@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Extend Partner Form View to add Panama Location Fields -->
+    <record id="view_partner_form_l10n_pa" model="ir.ui.view">
+        <field name="name">res.partner.form.l10n.pa</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form" />
+        <field name="arch" type="xml">
+            <!-- Add Panama location fields after state_id in the address section -->
+            <xpath expr="//field[@name='state_id']" position="after">
+                <field name="l10n_pa_distrito_id" placeholder="District" invisible="country_code != 'PA'"
+                       context="{'default_state_id': state_id}" />
+                <field name="l10n_pa_corregimiento_id" placeholder="Corregimiento" invisible="country_code != 'PA'"
+                       context="{'default_distrito_id': l10n_pa_distrito_id}" />
+                <field name="l10n_pa_codigo_ubicacion" invisible="1" readonly="1" />
+
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Extend Partner Tree View to show location code -->
+    <record id="view_partner_tree_l10n_pa" model="ir.ui.view">
+        <field name="name">res.partner.tree.l10n.pa</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_tree" />
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='state_id']" position="after">
+                <field name="l10n_pa_codigo_ubicacion" optional="hide" />
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

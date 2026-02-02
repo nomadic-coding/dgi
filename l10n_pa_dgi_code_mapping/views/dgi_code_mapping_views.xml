@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- List View -->
+    <record id="view_dgi_code_mapping_list" model="ir.ui.view">
+        <field name="name">dgi.code.mapping.list</field>
+        <field name="model">dgi.code.mapping</field>
+        <field name="arch" type="xml">
+            <list string="DGI Code Mappings">
+                <field name="code"/>
+                <field name="name"/>
+                <field name="mapping_type"/>
+                <field name="description"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Form View -->
+    <record id="view_dgi_code_mapping_form" model="ir.ui.view">
+        <field name="name">dgi.code.mapping.form</field>
+        <field name="model">dgi.code.mapping</field>
+        <field name="arch" type="xml">
+            <form string="DGI Code Mapping">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="code"/>
+                            <field name="name"/>
+                        </group>
+                        <group>
+                            <field name="mapping_type"/>
+                        </group>
+                    </group>
+                    <group>
+                        <field name="description"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Search View -->
+    <record id="view_dgi_code_mapping_search" model="ir.ui.view">
+        <field name="name">dgi.code.mapping.search</field>
+        <field name="model">dgi.code.mapping</field>
+        <field name="arch" type="xml">
+            <search string="Search DGI Codes">
+                <field name="code"/>
+                <field name="name"/>
+                <field name="mapping_type"/>
+                <filter string="Unit of Measure" name="filter_uom" domain="[('mapping_type', '=', 'unit_of_measure')]"/>
+                <filter string="Country" name="filter_country" domain="[('mapping_type', '=', 'country')]"/>
+                <filter string="Incoterm" name="filter_incoterm" domain="[('mapping_type', '=', 'incoterm')]"/>
+                <filter string="Currency" name="filter_currency" domain="[('mapping_type', '=', 'currency')]"/>
+                <filter string="Product/Service" name="filter_product" domain="[('mapping_type', '=', 'product_service')]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Mapping Type" name="group_mapping_type" context="{'group_by': 'mapping_type'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_dgi_code_mapping" model="ir.actions.act_window">
+        <field name="name">DGI Code Mappings</field>
+        <field name="res_model">dgi.code.mapping</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_dgi_code_mapping_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first DGI Code Mapping
+            </p>
+            <p>
+                DGI Code Mappings are used to map Odoo records to Panama DGI codes for electronic invoicing.
+            </p>
+        </field>
+    </record>
+
+    <!-- Menu -->
+    <menuitem id="menu_dgi_code_mapping"
+        name="DGI Code Mappings"
+        parent="account.menu_finance_configuration"
+        action="action_dgi_code_mapping"
+        sequence="100"
+        groups="base.group_no_one"/>
+
+</odoo>
+

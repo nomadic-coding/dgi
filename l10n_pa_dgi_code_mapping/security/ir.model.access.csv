@@ -1,0 +1,4 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_dgi_code_mapping_user,access_dgi_code_mapping_user,model_dgi_code_mapping,base.group_user,1,0,0,0
+access_dgi_code_mapping_system,access_dgi_code_mapping_system,model_dgi_code_mapping,base.group_system,1,1,1,1
+

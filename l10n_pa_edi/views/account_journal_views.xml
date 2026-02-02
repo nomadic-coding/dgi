@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_account_journal_form_dgi" model="ir.ui.view">
+        <field name="name">account.journal.form.dgi</field>
+        <field name="model">account.journal</field>
+        <field name="inherit_id" ref="account.view_account_journal_form" />
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page string="DGI Panama" name="dgi_panama">
+                    <group>
+                        <group string="Electronic Invoicing Configuration">
+                            <field name="use_dgi_electronic_invoicing" widget="boolean" />
+                            <field name="dgi_auto_send_on_post" widget="boolean"
+                                   invisible="not use_dgi_electronic_invoicing"
+                                   help="If enabled, invoices will be automatically sent to DGI when confirmed/posted. If disabled, use the 'Send to DGI' button to send manually." />
+                            <field name="dgi_codigo_sucursal_emisor" placeholder="0000"
+                                   invisible="not use_dgi_electronic_invoicing"
+                                   required="use_dgi_electronic_invoicing" />
+                            <field name="dgi_punto_facturacion_fiscal" placeholder="001"
+                                   invisible="not use_dgi_electronic_invoicing"
+                                   required="use_dgi_electronic_invoicing" />
+                        </group>
+                        <group string="Invoice Numbering">
+                            <field name="dgi_sequence_id" invisible="not use_dgi_electronic_invoicing"
+                                   required="use_dgi_electronic_invoicing" context="{'default_company_id': company_id}"
+                                   options="{'no_create': True, 'no_open': True}" />
+                            <div invisible="not use_dgi_electronic_invoicing" colspan="2" class="text-muted">
+                                This sequence will be used for customer invoices and credit notes
+                                when DGI electronic invoicing is enabled.
+                            </div>
+                        </group>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>

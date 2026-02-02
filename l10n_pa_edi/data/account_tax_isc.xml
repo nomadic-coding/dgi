@@ -1,0 +1,39 @@
+<odoo>
+    <record id="account_tax_isc_00_bebidas_espirituosas" model="account.tax.isc">
+        <field name="name">ISC 0.00% Bebidas Espirituosas</field>
+        <field name="rate">0.00</field>
+    </record>
+    <record id="account_tax_isc_00_mineria_no_metalica" model="account.tax.isc">
+        <field name="name">ISC 0.00% Minería no Metálica</field>
+        <field name="rate">0.00</field>
+    </record>
+    <record id="account_tax_isc_0035_licores" model="account.tax.isc">
+        <field name="name">ISC 3.5% Licores</field>
+        <field name="rate">0.035</field>
+    </record>
+    <record id="account_tax_isc_005_gaseosas_varios" model="account.tax.isc">
+        <field name="name">ISC 5.0% Gaseosas, Joyas y Armas de Fuego, Televisión por cable, microondas y satelital,
+            Telefonía móvil</field>
+        <field name="rate">0.05</field>
+    </record>
+    <record id="account_tax_isc_005_bebidas_alcoholicas" model="account.tax.isc">
+        <field name="name">ISC 5.0% Bebidas Alcohólicas</field>
+        <field name="rate">0.05</field>
+    </record>
+    <record id="account_tax_isc_005_vinos" model="account.tax.isc">
+        <field name="name">ISC 5.0% Vinos</field>
+        <field name="rate">0.05</field>
+    </record>
+    <record id="account_tax_isc_006_jarabes" model="account.tax.isc">
+        <field name="name">ISC 6.0% Jarabes, siropes o concentrados</field>
+        <field name="rate">0.06</field>
+    </record>
+    <record id="account_tax_isc_01325_cervezas" model="account.tax.isc">
+        <field name="name">ISC 13.25% Cervezas</field>
+        <field name="rate">0.1325</field>
+    </record>
+    <record id="account_tax_isc_0325_cigarrillos" model="account.tax.isc">
+        <field name="name">ISC 32.5% Cigarrillos y tabacos</field>
+        <field name="rate">0.325</field>
+    </record>
+</odoo>

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="res_config_settings_view_form" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.l10n_pa_edi</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="base.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="inside">
+                <app string="Panama Electronic Invoicing" name="l10n_pa_edi">
+                    <block title="HKA API Configuration">
+                        <setting>
+                            <label for="hka_api_url"/>
+                            <field name="hka_api_url" placeholder="https://demointegracion.thefactoryhka.com.pa"/>
+                            <div class="text-muted">
+                                HKA API endpoint URL
+                            </div>
+                        </setting>
+                        <setting>
+                            <label for="hka_usuario"/>
+                            <field name="hka_usuario" password="True"/>
+                            <div class="text-muted">
+                                HKA API username/token
+                            </div>
+                        </setting>
+                        <setting>
+                            <label for="hka_clave"/>
+                            <field name="hka_clave" password="True"/>
+                            <div class="text-muted">
+                                HKA API password
+                            </div>
+                        </setting>
+                        <setting>
+                            <label for="hka_timeout"/>
+                            <field name="hka_timeout"/>
+                        </setting>
+                        <setting>
+                            <field name="hka_verify_ssl" class="oe_inline"/>
+                            <label for="hka_verify_ssl"/>
+                            <div class="text-muted">
+                                Verify SSL certificates
+                            </div>
+                        </setting>
+                    </block>
+                </app>
+            </xpath>
+        </field>
+    </record>
+</odoo>
+

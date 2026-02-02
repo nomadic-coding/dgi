@@ -1,0 +1,630 @@
+id,name,code,codigo_ubicacion,distrito_id:id,is_cabecera
+corr_1_1_1,BOCAS DEL TORO (CABECERA),1,1-1-1,distrito_pa_1_1,True
+corr_1_1_2,BASTIMENTOS,2,1-1-2,distrito_pa_1_1,False
+corr_1_1_3,CAUCHERO,3,1-1-3,distrito_pa_1_1,False
+corr_1_1_4,PUNTA LAUREL,4,1-1-4,distrito_pa_1_1,False
+corr_1_1_5,TIERRA OSCURA,5,1-1-5,distrito_pa_1_1,False
+corr_1_2_1,CHANGUINOLA (CABECERA),1,1-2-1,distrito_pa_1_2,True
+corr_1_2_2,ALMIRANTE,2,1-2-2,distrito_pa_1_2,False
+corr_1_2_3,GUABITO,3,1-2-3,distrito_pa_1_2,False
+corr_1_2_4,TERIBE,4,1-2-4,distrito_pa_1_2,False
+corr_1_2_5,VALLE DEL RISCO,5,1-2-5,distrito_pa_1_2,False
+corr_1_2_6,EL EMPALME,6,1-2-6,distrito_pa_1_2,False
+corr_1_2_7,LAS TABLAS,7,1-2-7,distrito_pa_1_2,False
+corr_1_3_1,CHIRIQUI GRANDE (CABECERA),1,1-3-1,distrito_pa_1_3,True
+corr_1_3_2,MIRAMAR,2,1-3-2,distrito_pa_1_3,False
+corr_1_3_3,PUNTA PEÑA,3,1-3-3,distrito_pa_1_3,False
+corr_1_3_4,PUNTA ROBALO,4,1-3-4,distrito_pa_1_3,False
+corr_1_3_5,RAMBALA,5,1-3-5,distrito_pa_1_3,False
+corr_2_1_1,AGUADULCE (CABECERA),1,2-1-1,distrito_pa_2_1,True
+corr_2_1_2,EL CRISTO,2,2-1-2,distrito_pa_2_1,False
+corr_2_1_3,EL ROBLE,3,2-1-3,distrito_pa_2_1,False
+corr_2_1_4,POCRI,4,2-1-4,distrito_pa_2_1,False
+corr_2_1_5,BARRIOS UNIDOS,5,2-1-5,distrito_pa_2_1,False
+corr_2_2_1,ANTON (CABECERA),1,2-2-1,distrito_pa_2_2,True
+corr_2_2_2,CABUYA,2,2-2-2,distrito_pa_2_2,False
+corr_2_2_3,EL CHIRU,3,2-2-3,distrito_pa_2_2,False
+corr_2_2_4,EL RETIRO,4,2-2-4,distrito_pa_2_2,False
+corr_2_2_5,EL VALLE,5,2-2-5,distrito_pa_2_2,False
+corr_2_2_6,JUAN DIAZ,6,2-2-6,distrito_pa_2_2,False
+corr_2_2_7,RIO HATO,7,2-2-7,distrito_pa_2_2,False
+corr_2_2_8,SAN JUAN DE DIOS,8,2-2-8,distrito_pa_2_2,False
+corr_2_2_9,SANTA RITA,9,2-2-9,distrito_pa_2_2,False
+corr_2_2_10,CABALLERO,10,2-2-10,distrito_pa_2_2,False
+corr_2_3_1,LA PINTADA (CABECERA),1,2-3-1,distrito_pa_2_3,True
+corr_2_3_2,EL HARINO,2,2-3-2,distrito_pa_2_3,False
+corr_2_3_3,EL POTRERO,3,2-3-3,distrito_pa_2_3,False
+corr_2_3_4,LLANO GRANDE,4,2-3-4,distrito_pa_2_3,False
+corr_2_3_5,PIEDRAS GORDAS,5,2-3-5,distrito_pa_2_3,False
+corr_2_3_6,LAS LOMAS,6,2-3-6,distrito_pa_2_3,False
+corr_2_4_1,NATA (CABECERA),1,2-4-1,distrito_pa_2_4,True
+corr_2_4_2,CAPELLANIA,2,2-4-2,distrito_pa_2_4,False
+corr_2_4_3,EL CAÑO,3,2-4-3,distrito_pa_2_4,False
+corr_2_4_4,GUZMAN,4,2-4-4,distrito_pa_2_4,False
+corr_2_4_5,LAS HUACAS,5,2-4-5,distrito_pa_2_4,False
+corr_2_4_6,TOZA,6,2-4-6,distrito_pa_2_4,False
+corr_2_5_1,OLA (CABECERA),1,2-5-1,distrito_pa_2_5,True
+corr_2_5_2,EL COPE,2,2-5-2,distrito_pa_2_5,False
+corr_2_5_3,EL PALMAR,3,2-5-3,distrito_pa_2_5,False
+corr_2_5_4,EL PICACHO,4,2-5-4,distrito_pa_2_5,False
+corr_2_5_5,LA PAVA,5,2-5-5,distrito_pa_2_5,False
+corr_2_6_1,PENONOME (CABECERA),1,2-6-1,distrito_pa_2_6,True
+corr_2_6_2,CAÑAVERAL,2,2-6-2,distrito_pa_2_6,False
+corr_2_6_3,COCLE,3,2-6-3,distrito_pa_2_6,False
+corr_2_6_4,CHIGUIRI ARRIBA,4,2-6-4,distrito_pa_2_6,False
+corr_2_6_5,EL COCO,5,2-6-5,distrito_pa_2_6,False
+corr_2_6_6,PAJONAL,6,2-6-6,distrito_pa_2_6,False
+corr_2_6_7,RIO GRANDE,7,2-6-7,distrito_pa_2_6,False
+corr_2_6_8,RIO INDIO,8,2-6-8,distrito_pa_2_6,False
+corr_2_6_9,TOABRE,9,2-6-9,distrito_pa_2_6,False
+corr_2_6_10,TULU,10,2-6-10,distrito_pa_2_6,False
+corr_3_1_1,BARRIO NORTE,1,3-1-1,distrito_pa_3_1,False
+corr_3_1_2,BARRIO SUR,2,3-1-2,distrito_pa_3_1,False
+corr_3_1_3,BUENA VISTA,3,3-1-3,distrito_pa_3_1,False
+corr_3_1_4,CATIVA,4,3-1-4,distrito_pa_3_1,False
+corr_3_1_5,CIRICITO,5,3-1-5,distrito_pa_3_1,False
+corr_3_1_6,CRISTOBAL,6,3-1-6,distrito_pa_3_1,False
+corr_3_1_7,ESCOBAL,7,3-1-7,distrito_pa_3_1,False
+corr_3_1_8,LIMON,8,3-1-8,distrito_pa_3_1,False
+corr_3_1_9,NUEVA PROVIDENCIA,9,3-1-9,distrito_pa_3_1,False
+corr_3_1_10,PUERTO PILON,10,3-1-10,distrito_pa_3_1,False
+corr_3_1_11,SABANITAS,11,3-1-11,distrito_pa_3_1,False
+corr_3_1_12,SALAMANCA,12,3-1-12,distrito_pa_3_1,False
+corr_3_1_13,SAN JUAN,13,3-1-13,distrito_pa_3_1,False
+corr_3_1_14,SANTA ROSA,14,3-1-14,distrito_pa_3_1,False
+corr_3_2_1,NUEVO CHAGRES (CABECERA),1,3-2-1,distrito_pa_3_2,True
+corr_3_2_2,ACHIOTE,2,3-2-2,distrito_pa_3_2,False
+corr_3_2_3,EL GUABO,3,3-2-3,distrito_pa_3_2,False
+corr_3_2_4,LA ENCANTADA,4,3-2-4,distrito_pa_3_2,False
+corr_3_2_5,PALMAS BELLAS,5,3-2-5,distrito_pa_3_2,False
+corr_3_2_6,PIÑA,6,3-2-6,distrito_pa_3_2,False
+corr_3_2_7,SALUD,7,3-2-7,distrito_pa_3_2,False
+corr_3_3_1,MIGUEL DE LA BORDA (CABECERA),1,3-3-1,distrito_pa_3_3,True
+corr_3_3_2,COCLE DEL NORTE,2,3-3-2,distrito_pa_3_3,False
+corr_3_3_3,EL GUASIMO,3,3-3-3,distrito_pa_3_3,False
+corr_3_3_4,GOBEA,4,3-3-4,distrito_pa_3_3,False
+corr_3_3_5,RIO INDIO,5,3-3-5,distrito_pa_3_3,False
+corr_3_3_6,SAN JOSE DEL GENERAL,6,3-3-6,distrito_pa_3_3,False
+corr_3_4_1,PORTOBELO (CABECERA),1,3-4-1,distrito_pa_3_4,True
+corr_3_4_2,CACIQUE,2,3-4-2,distrito_pa_3_4,False
+corr_3_4_3,GARROTE,3,3-4-3,distrito_pa_3_4,False
+corr_3_4_4,ISLA GRANDE,4,3-4-4,distrito_pa_3_4,False
+corr_3_4_5,MARIA CHIQUITA,5,3-4-5,distrito_pa_3_4,False
+corr_3_5_1,PALENQUE (CABECERA),1,3-5-1,distrito_pa_3_5,True
+corr_3_5_2,CUANGO,2,3-5-2,distrito_pa_3_5,False
+corr_3_5_3,MIRAMAR,3,3-5-3,distrito_pa_3_5,False
+corr_3_5_4,NOMBRE DE DIOS,4,3-5-4,distrito_pa_3_5,False
+corr_3_5_5,PALMIRA,5,3-5-5,distrito_pa_3_5,False
+corr_3_5_6,PLAYA CHIQUITA,6,3-5-6,distrito_pa_3_5,False
+corr_3_5_7,SANTA ISABEL,7,3-5-7,distrito_pa_3_5,False
+corr_3_5_8,VIENTO FRIO,8,3-5-8,distrito_pa_3_5,False
+corr_4_1_1,ALANJE (CABECERA),1,4-1-1,distrito_pa_4_1,True
+corr_4_1_2,DIVALA,2,4-1-2,distrito_pa_4_1,False
+corr_4_1_3,EL TEJAR,3,4-1-3,distrito_pa_4_1,False
+corr_4_1_4,GUARUMAL,4,4-1-4,distrito_pa_4_1,False
+corr_4_1_5,PALO GRANDE,5,4-1-5,distrito_pa_4_1,False
+corr_4_1_6,QUEREVALO,6,4-1-6,distrito_pa_4_1,False
+corr_4_1_7,SANTO TOMAS,7,4-1-7,distrito_pa_4_1,False
+corr_4_1_8,CANTA GALLO,8,4-1-8,distrito_pa_4_1,False
+corr_4_1_9,NUEVO MEXICO,9,4-1-9,distrito_pa_4_1,False
+corr_4_2_1,PUERTO ARMUELLES (CABECERA),1,4-2-1,distrito_pa_4_2,True
+corr_4_2_2,LIMONES,2,4-2-2,distrito_pa_4_2,False
+corr_4_2_3,PROGRESO,3,4-2-3,distrito_pa_4_2,False
+corr_4_2_4,BACO,4,4-2-4,distrito_pa_4_2,False
+corr_4_2_5,RODOLFO AGUILAR DELGADO,5,4-2-5,distrito_pa_4_2,False
+corr_4_3_1,BOQUERON (CABECERA),1,4-3-1,distrito_pa_4_3,True
+corr_4_3_2,BAGALA,2,4-3-2,distrito_pa_4_3,False
+corr_4_3_3,CORDILLERA,3,4-3-3,distrito_pa_4_3,False
+corr_4_3_4,GUABAL,4,4-3-4,distrito_pa_4_3,False
+corr_4_3_5,GUAYABAL,5,4-3-5,distrito_pa_4_3,False
+corr_4_3_6,PARAISO,6,4-3-6,distrito_pa_4_3,False
+corr_4_3_7,PEDREGAL,7,4-3-7,distrito_pa_4_3,False
+corr_4_3_8,TIJERAS,8,4-3-8,distrito_pa_4_3,False
+corr_4_4_1,BAJO BOQUETE (CABECERA),1,4-4-1,distrito_pa_4_4,True
+corr_4_4_2,CALDERA,2,4-4-2,distrito_pa_4_4,False
+corr_4_4_3,PALMIRA,3,4-4-3,distrito_pa_4_4,False
+corr_4_4_4,ALTO BOQUETE,4,4-4-4,distrito_pa_4_4,False
+corr_4_4_5,JARAMILLO,5,4-4-5,distrito_pa_4_4,False
+corr_4_4_6,LOS NARANJOS,6,4-4-6,distrito_pa_4_4,False
+corr_4_5_1,LA CONCEPCION (CABECERA),1,4-5-1,distrito_pa_4_5,True
+corr_4_5_2,ASERRIO DE GARICHE,2,4-5-2,distrito_pa_4_5,False
+corr_4_5_3,BUGABA,3,4-5-3,distrito_pa_4_5,False
+corr_4_5_4,CERRO PUNTA,4,4-5-4,distrito_pa_4_5,False
+corr_4_5_5,GOMEZ,5,4-5-5,distrito_pa_4_5,False
+corr_4_5_6,LA ESTRELLA,6,4-5-6,distrito_pa_4_5,False
+corr_4_5_7,SAN ANDRES,7,4-5-7,distrito_pa_4_5,False
+corr_4_5_8,SANTA MARTA,8,4-5-8,distrito_pa_4_5,False
+corr_4_5_9,SANTA ROSA,9,4-5-9,distrito_pa_4_5,False
+corr_4_5_10,SANTO DOMINGO,10,4-5-10,distrito_pa_4_5,False
+corr_4_5_11,SORTOVA,11,4-5-11,distrito_pa_4_5,False
+corr_4_5_12,VOLCAN,12,4-5-12,distrito_pa_4_5,False
+corr_4_5_13,EL BONGO,13,4-5-13,distrito_pa_4_5,False
+corr_4_6_1,DAVID (CABECERA),1,4-6-1,distrito_pa_4_6,True
+corr_4_6_2,BIJAGUAL,2,4-6-2,distrito_pa_4_6,False
+corr_4_6_3,COCHEA,3,4-6-3,distrito_pa_4_6,False
+corr_4_6_4,CHIRIQUI,4,4-6-4,distrito_pa_4_6,False
+corr_4_6_5,GUACA,5,4-6-5,distrito_pa_4_6,False
+corr_4_6_6,LAS LOMAS,6,4-6-6,distrito_pa_4_6,False
+corr_4_6_7,PEDREGAL,7,4-6-7,distrito_pa_4_6,False
+corr_4_6_8,SAN CARLOS,8,4-6-8,distrito_pa_4_6,False
+corr_4_6_9,SAN PABLO NUEVO,9,4-6-9,distrito_pa_4_6,False
+corr_4_6_10,SAN PABLO VIEJO,10,4-6-10,distrito_pa_4_6,False
+corr_4_7_1,DOLEGA (CABECERA),1,4-7-1,distrito_pa_4_7,True
+corr_4_7_2,DOS RIOS,2,4-7-2,distrito_pa_4_7,False
+corr_4_7_3,LOS ANASTACIOS,3,4-7-3,distrito_pa_4_7,False
+corr_4_7_4,POTRERILLOS,4,4-7-4,distrito_pa_4_7,False
+corr_4_7_5,POTRERILLOS ABAJO,5,4-7-5,distrito_pa_4_7,False
+corr_4_7_6,ROVIRA,6,4-7-6,distrito_pa_4_7,False
+corr_4_7_7,TINAJAS,7,4-7-7,distrito_pa_4_7,False
+corr_4_7_8,LOS ALGARRROBOS,8,4-7-8,distrito_pa_4_7,False
+corr_4_8_1,GUALACA (CABECERA),1,4-8-1,distrito_pa_4_8,True
+corr_4_8_2,HORNITO,2,4-8-2,distrito_pa_4_8,False
+corr_4_8_3,LOS ANGELES,3,4-8-3,distrito_pa_4_8,False
+corr_4_8_4,PAJA DE SOMBRERO,4,4-8-4,distrito_pa_4_8,False
+corr_4_8_5,RINCON,5,4-8-5,distrito_pa_4_8,False
+corr_4_9_1,REMEDIOS (CABECERA),1,4-9-1,distrito_pa_4_9,True
+corr_4_9_2,EL NANCITO,2,4-9-2,distrito_pa_4_9,False
+corr_4_9_3,EL PORVENIR,3,4-9-3,distrito_pa_4_9,False
+corr_4_9_4,EL PUERTO,4,4-9-4,distrito_pa_4_9,False
+corr_4_9_5,SANTA LUCIA,5,4-9-5,distrito_pa_4_9,False
+corr_4_10_1,RIO SERENO (CABECERA),1,4-10-1,distrito_pa_4_10,True
+corr_4_10_2,BREÑON,2,4-10-2,distrito_pa_4_10,False
+corr_4_10_3,CAÑAS GORDAS,3,4-10-3,distrito_pa_4_10,False
+corr_4_10_4,MONTE LIRIO,4,4-10-4,distrito_pa_4_10,False
+corr_4_10_5,PLAZA CAISAN,5,4-10-5,distrito_pa_4_10,False
+corr_4_10_6,SANTA CRUZ,6,4-10-6,distrito_pa_4_10,False
+corr_4_10_7,DOMINICAL,7,4-10-7,distrito_pa_4_10,False
+corr_4_10_8,SANTA CLARA,8,4-10-8,distrito_pa_4_10,False
+corr_4_11_1,LAS LAJAS (CABECERA),1,4-11-1,distrito_pa_4_11,True
+corr_4_11_2,JUAY,2,4-11-2,distrito_pa_4_11,False
+corr_4_11_3,LAJAS ADENTRO,3,4-11-3,distrito_pa_4_11,False
+corr_4_11_4,SAN FELIX,4,4-11-4,distrito_pa_4_11,False
+corr_4_11_5,SANTA CRUZ,5,4-11-5,distrito_pa_4_11,False
+corr_4_12_1,HORCONCITOS (CABECERA),1,4-12-1,distrito_pa_4_12,True
+corr_4_12_2,BOCA CHICA,2,4-12-2,distrito_pa_4_12,False
+corr_4_12_3,BOCA DEL MONTE,3,4-12-3,distrito_pa_4_12,False
+corr_4_12_4,SAN JUAN,4,4-12-4,distrito_pa_4_12,False
+corr_4_12_5,SAN LORENZO,5,4-12-5,distrito_pa_4_12,False
+corr_4_13_1,TOLE (CABECERA),1,4-13-1,distrito_pa_4_13,True
+corr_4_13_2,BELLA VISTA,2,4-13-2,distrito_pa_4_13,False
+corr_4_13_3,CERRO VIEJO,3,4-13-3,distrito_pa_4_13,False
+corr_4_13_4,EL CRISTO,4,4-13-4,distrito_pa_4_13,False
+corr_4_13_5,JUSTO FIDEL PALACIOS,5,4-13-5,distrito_pa_4_13,False
+corr_4_13_6,LAJAS DE TOLE,6,4-13-6,distrito_pa_4_13,False
+corr_4_13_7,POTRERO DE CAÑA,7,4-13-7,distrito_pa_4_13,False
+corr_4_13_8,QUEBRADA DE PIEDRA,8,4-13-8,distrito_pa_4_13,False
+corr_4_13_9,VELADERO,9,4-13-9,distrito_pa_4_13,False
+corr_5_1_1,LA PALMA (CABECERA),1,5-1-1,distrito_pa_5_1,True
+corr_5_1_2,CAMOGANTI,2,5-1-2,distrito_pa_5_1,False
+corr_5_1_3,CHEPIGANA,3,5-1-3,distrito_pa_5_1,False
+corr_5_1_4,GARACHINE,4,5-1-4,distrito_pa_5_1,False
+corr_5_1_5,JAQUE,5,5-1-5,distrito_pa_5_1,False
+corr_5_1_6,PUERTO PIÑA,6,5-1-6,distrito_pa_5_1,False
+corr_5_1_7,RIO CONGO,7,5-1-7,distrito_pa_5_1,False
+corr_5_1_8,RIO IGLESIAS,8,5-1-8,distrito_pa_5_1,False
+corr_5_1_9,SAMBU,9,5-1-9,distrito_pa_5_1,False
+corr_5_1_10,SETEGANTI,10,5-1-10,distrito_pa_5_1,False
+corr_5_1_11,TAIMATI,11,5-1-11,distrito_pa_5_1,False
+corr_5_1_12,TUCUTI,12,5-1-12,distrito_pa_5_1,False
+corr_5_1_13,AGUA FRIA,13,5-1-13,distrito_pa_5_1,False
+corr_5_1_14,CUCUNATI,14,5-1-14,distrito_pa_5_1,False
+corr_5_1_15,RIO CONGO ARRIBA,15,5-1-15,distrito_pa_5_1,False
+corr_5_1_16,SANTA FE,16,5-1-16,distrito_pa_5_1,False
+corr_5_2_1,EL REAL DE SANTA MARIA (CABECE,1,5-2-1,distrito_pa_5_2,True
+corr_5_2_2,BOCA DE CUPE,2,5-2-2,distrito_pa_5_2,False
+corr_5_2_3,PAYA,3,5-2-3,distrito_pa_5_2,False
+corr_5_2_4,PINOGANA,4,5-2-4,distrito_pa_5_2,False
+corr_5_2_5,PUCURO,5,5-2-5,distrito_pa_5_2,False
+corr_5_2_6,YAPE,6,5-2-6,distrito_pa_5_2,False
+corr_5_2_7,YAVIZA,7,5-2-7,distrito_pa_5_2,False
+corr_5_2_8,METETI,8,5-2-8,distrito_pa_5_2,False
+corr_5_2_9,COMARCA KUNA DE WARGANDI,9,5-2-9,distrito_pa_5_2,False
+corr_6_1_1,CHITRE (CABECERA),1,6-1-1,distrito_pa_6_1,True
+corr_6_1_2,LA ARENA,2,6-1-2,distrito_pa_6_1,False
+corr_6_1_3,MONAGRILLO,3,6-1-3,distrito_pa_6_1,False
+corr_6_1_4,LLANO BONITO,4,6-1-4,distrito_pa_6_1,False
+corr_6_1_5,SAN JUAN BAUTISTA,5,6-1-5,distrito_pa_6_1,False
+corr_6_2_1,LAS MINAS (CABECERA),1,6-2-1,distrito_pa_6_2,True
+corr_6_2_2,CHEPO,2,6-2-2,distrito_pa_6_2,False
+corr_6_2_3,CHUMICAL,3,6-2-3,distrito_pa_6_2,False
+corr_6_2_4,EL TORO,4,6-2-4,distrito_pa_6_2,False
+corr_6_2_5,LEONES,5,6-2-5,distrito_pa_6_2,False
+corr_6_2_6,QUEBRADA DEL ROSARIO,6,6-2-6,distrito_pa_6_2,False
+corr_6_2_7,QUEBRADA EL CIPRIAN,7,6-2-7,distrito_pa_6_2,False
+corr_6_3_1,LOS POZOS (CABECERA),1,6-3-1,distrito_pa_6_3,True
+corr_6_3_2,CAPURI,2,6-3-2,distrito_pa_6_3,False
+corr_6_3_3,EL CALABACITO,3,6-3-3,distrito_pa_6_3,False
+corr_6_3_4,EL CEDRO,4,6-3-4,distrito_pa_6_3,False
+corr_6_3_5,LA ARENA,5,6-3-5,distrito_pa_6_3,False
+corr_6_3_6,LA PITALOSA,6,6-3-6,distrito_pa_6_3,False
+corr_6_3_7,LOS CERRITOS,7,6-3-7,distrito_pa_6_3,False
+corr_6_3_8,LOS CERROS DE PAJA,8,6-3-8,distrito_pa_6_3,False
+corr_6_3_9,LAS LLANAS,9,6-3-9,distrito_pa_6_3,False
+corr_6_4_1,OCU (CABECERA),1,6-4-1,distrito_pa_6_4,True
+corr_6_4_2,CERRO LARGO,2,6-4-2,distrito_pa_6_4,False
+corr_6_4_3,LOS LLANOS,3,6-4-3,distrito_pa_6_4,False
+corr_6_4_4,LLANO GRANDE,4,6-4-4,distrito_pa_6_4,False
+corr_6_4_5,PEÑAS CHATAS,5,6-4-5,distrito_pa_6_4,False
+corr_6_4_6,EL TIJERA,6,6-4-6,distrito_pa_6_4,False
+corr_6_4_7,MENCHACA,7,6-4-7,distrito_pa_6_4,False
+corr_6_5_1,PARITA (CABECERA),1,6-5-1,distrito_pa_6_5,True
+corr_6_5_2,CABUYA,2,6-5-2,distrito_pa_6_5,False
+corr_6_5_3,LOS CASTILLOS,3,6-5-3,distrito_pa_6_5,False
+corr_6_5_4,LLANO DE LA CRUZ,4,6-5-4,distrito_pa_6_5,False
+corr_6_5_5,PARIS,5,6-5-5,distrito_pa_6_5,False
+corr_6_5_6,PORTOBELILLO,6,6-5-6,distrito_pa_6_5,False
+corr_6_5_7,POTUGA,7,6-5-7,distrito_pa_6_5,False
+corr_6_6_1,PESE (CABECERA),1,6-6-1,distrito_pa_6_6,True
+corr_6_6_2,LAS CABRAS,2,6-6-2,distrito_pa_6_6,False
+corr_6_6_3,EL PAJARO,3,6-6-3,distrito_pa_6_6,False
+corr_6_6_4,EL BARRERO,4,6-6-4,distrito_pa_6_6,False
+corr_6_6_5,EL PEDREGOSO,5,6-6-5,distrito_pa_6_6,False
+corr_6_6_6,EL CIRUELO,6,6-6-6,distrito_pa_6_6,False
+corr_6_6_7,SABANAGRANDE,7,6-6-7,distrito_pa_6_6,False
+corr_6_6_8,RINCON HONDO,8,6-6-8,distrito_pa_6_6,False
+corr_6_7_1,SANTA MARIA (CABECERA),1,6-7-1,distrito_pa_6_7,True
+corr_6_7_2,CHUPAMPA,2,6-7-2,distrito_pa_6_7,False
+corr_6_7_3,EL RINCON,3,6-7-3,distrito_pa_6_7,False
+corr_6_7_4,EL LIMON,4,6-7-4,distrito_pa_6_7,False
+corr_6_7_5,LOS CANELOS,5,6-7-5,distrito_pa_6_7,False
+corr_7_1_1,GUARARE (CABECERA),1,7-1-1,distrito_pa_7_1,True
+corr_7_1_2,EL ESPINAL,2,7-1-2,distrito_pa_7_1,False
+corr_7_1_3,EL MACANO,3,7-1-3,distrito_pa_7_1,False
+corr_7_1_4,GUARARE ARRIBA,4,7-1-4,distrito_pa_7_1,False
+corr_7_1_5,LA ENEA,5,7-1-5,distrito_pa_7_1,False
+corr_7_1_6,LA PASERA,6,7-1-6,distrito_pa_7_1,False
+corr_7_1_7,LAS TRANCAS,7,7-1-7,distrito_pa_7_1,False
+corr_7_1_8,LLANO ABAJO,8,7-1-8,distrito_pa_7_1,False
+corr_7_1_9,EL HATO,9,7-1-9,distrito_pa_7_1,False
+corr_7_1_10,PERALES,10,7-1-10,distrito_pa_7_1,False
+corr_7_2_1,LAS TABLAS (CABECERA),1,7-2-1,distrito_pa_7_2,True
+corr_7_2_2,BAJO CORRAL,2,7-2-2,distrito_pa_7_2,False
+corr_7_2_3,BAYANO,3,7-2-3,distrito_pa_7_2,False
+corr_7_2_4,EL CARATE,4,7-2-4,distrito_pa_7_2,False
+corr_7_2_5,EL COCAL,5,7-2-5,distrito_pa_7_2,False
+corr_7_2_6,EL MANANTIAL,6,7-2-6,distrito_pa_7_2,False
+corr_7_2_7,EL MUÑOZ,7,7-2-7,distrito_pa_7_2,False
+corr_7_2_8,EL PEDREGOSO,8,7-2-8,distrito_pa_7_2,False
+corr_7_2_9,LA LAJA,9,7-2-9,distrito_pa_7_2,False
+corr_7_2_10,LA MIEL,10,7-2-10,distrito_pa_7_2,False
+corr_7_2_11,LA PALMA,11,7-2-11,distrito_pa_7_2,False
+corr_7_2_12,LA TIZA,12,7-2-12,distrito_pa_7_2,False
+corr_7_2_13,LAS PALMITAS,13,7-2-13,distrito_pa_7_2,False
+corr_7_2_14,LAS TABLAS ABAJO,14,7-2-14,distrito_pa_7_2,False
+corr_7_2_15,NUARIO,15,7-2-15,distrito_pa_7_2,False
+corr_7_2_16,PALMIRA,16,7-2-16,distrito_pa_7_2,False
+corr_7_2_17,PEÑA BLANCA,17,7-2-17,distrito_pa_7_2,False
+corr_7_2_18,RIO HONDO,18,7-2-18,distrito_pa_7_2,False
+corr_7_2_19,SAN JOSE,19,7-2-19,distrito_pa_7_2,False
+corr_7_2_20,SAN MIGUEL,20,7-2-20,distrito_pa_7_2,False
+corr_7_2_21,SANTO DOMINGO,21,7-2-21,distrito_pa_7_2,False
+corr_7_2_22,SESTEADERO,22,7-2-22,distrito_pa_7_2,False
+corr_7_2_23,VALLE RICO,23,7-2-23,distrito_pa_7_2,False
+corr_7_2_24,VALLERIQUITO,24,7-2-24,distrito_pa_7_2,False
+corr_7_3_1,LA VILLA DE LOS SANTOS (CABECE,1,7-3-1,distrito_pa_7_3,True
+corr_7_3_2,EL GUASIMO,2,7-3-2,distrito_pa_7_3,False
+corr_7_3_3,LA COLORADA,3,7-3-3,distrito_pa_7_3,False
+corr_7_3_4,LA ESPIGADILLA,4,7-3-4,distrito_pa_7_3,False
+corr_7_3_5,LAS CRUCES,5,7-3-5,distrito_pa_7_3,False
+corr_7_3_6,LAS GUABAS,6,7-3-6,distrito_pa_7_3,False
+corr_7_3_7,LOS ANGELES,7,7-3-7,distrito_pa_7_3,False
+corr_7_3_8,LOS OLIVOS,8,7-3-8,distrito_pa_7_3,False
+corr_7_3_9,LLANO LARGO,9,7-3-9,distrito_pa_7_3,False
+corr_7_3_10,SABANAGRANDE,10,7-3-10,distrito_pa_7_3,False
+corr_7_3_11,SANTA ANA,11,7-3-11,distrito_pa_7_3,False
+corr_7_3_12,TRES QUEBRADAS,12,7-3-12,distrito_pa_7_3,False
+corr_7_3_13,AGUA BUENA,13,7-3-13,distrito_pa_7_3,False
+corr_7_3_14,VILLA LOURDES,14,7-3-14,distrito_pa_7_3,False
+corr_7_4_1,MACARACAS (CABECERA),1,7-4-1,distrito_pa_7_4,True
+corr_7_4_2,BAHIA HONDA,2,7-4-2,distrito_pa_7_4,False
+corr_7_4_3,BAJOS DE GUERA,3,7-4-3,distrito_pa_7_4,False
+corr_7_4_4,COROZAL,4,7-4-4,distrito_pa_7_4,False
+corr_7_4_5,CHUPA,5,7-4-5,distrito_pa_7_4,False
+corr_7_4_6,EL CEDRO,6,7-4-6,distrito_pa_7_4,False
+corr_7_4_7,ESPINO AMARILLO,7,7-4-7,distrito_pa_7_4,False
+corr_7_4_8,LA MESA,8,7-4-8,distrito_pa_7_4,False
+corr_7_4_9,LAS PALMAS,9,7-4-9,distrito_pa_7_4,False
+corr_7_4_10,LLANO DE PIEDRA,10,7-4-10,distrito_pa_7_4,False
+corr_7_4_11,MOGOLLON,11,7-4-11,distrito_pa_7_4,False
+corr_7_5_1,PEDASI (CABECERA),1,7-5-1,distrito_pa_7_5,True
+corr_7_5_2,LOS ASIENTOS,2,7-5-2,distrito_pa_7_5,False
+corr_7_5_3,MARIABE,3,7-5-3,distrito_pa_7_5,False
+corr_7_5_4,PURIO,4,7-5-4,distrito_pa_7_5,False
+corr_7_5_5,ORIA ARRIBA,5,7-5-5,distrito_pa_7_5,False
+corr_7_6_1,POCRI,1,7-6-1,distrito_pa_7_6,False
+corr_7_6_2,EL CAÑAFISTULO,2,7-6-2,distrito_pa_7_6,False
+corr_7_6_3,LAJAMINA,3,7-6-3,distrito_pa_7_6,False
+corr_7_6_4,PARAISO,4,7-6-4,distrito_pa_7_6,False
+corr_7_6_5,PARITILLA,5,7-6-5,distrito_pa_7_6,False
+corr_7_7_1,TONOSI (CABECERA),1,7-7-1,distrito_pa_7_7,True
+corr_7_7_2,ALTOS DE GUERA,2,7-7-2,distrito_pa_7_7,False
+corr_7_7_3,CAÑAS,3,7-7-3,distrito_pa_7_7,False
+corr_7_7_4,EL BEBEDERO,4,7-7-4,distrito_pa_7_7,False
+corr_7_7_5,EL CACAO,5,7-7-5,distrito_pa_7_7,False
+corr_7_7_6,EL CORTEZO,6,7-7-6,distrito_pa_7_7,False
+corr_7_7_7,FLORES,7,7-7-7,distrito_pa_7_7,False
+corr_7_7_8,GUANICO,8,7-7-8,distrito_pa_7_7,False
+corr_7_7_9,LA TRONOSA,9,7-7-9,distrito_pa_7_7,False
+corr_7_7_10,CAMBUTAL,10,7-7-10,distrito_pa_7_7,False
+corr_7_7_11,ISLA DE CAQAS,11,7-7-11,distrito_pa_7_7,False
+corr_8_2_1,SAN MIGUEL (CABECERA),1,8-2-1,distrito_pa_8_2,True
+corr_8_2_2,LA ENSENADA,2,8-2-2,distrito_pa_8_2,False
+corr_8_2_3,LA ESMERALDA,3,8-2-3,distrito_pa_8_2,False
+corr_8_2_4,LA GUINEA,4,8-2-4,distrito_pa_8_2,False
+corr_8_2_5,PEDRO GONZALEZ,5,8-2-5,distrito_pa_8_2,False
+corr_8_2_6,SABOGA,6,8-2-6,distrito_pa_8_2,False
+corr_8_5_1,CHEPO (CABECERA),1,8-5-1,distrito_pa_8_5,True
+corr_8_5_2,CAÑITA,2,8-5-2,distrito_pa_8_5,False
+corr_8_5_3,CHEPILLO,3,8-5-3,distrito_pa_8_5,False
+corr_8_5_4,EL LLANO,4,8-5-4,distrito_pa_8_5,False
+corr_8_5_5,LAS MARGARITAS,5,8-5-5,distrito_pa_8_5,False
+corr_8_5_6,SANTA CRUZ DE CHININA,6,8-5-6,distrito_pa_8_5,False
+corr_8_5_7,COMARCA KUNA DE MADUNGANDI,7,8-5-7,distrito_pa_8_5,False
+corr_8_5_8,TORTI,8,8-5-8,distrito_pa_8_5,False
+corr_8_6_1,CHIMAN (CABECERA),1,8-6-1,distrito_pa_8_6,True
+corr_8_6_2,BRUJAS,2,8-6-2,distrito_pa_8_6,False
+corr_8_6_3,GONZALO VASQUEZ,3,8-6-3,distrito_pa_8_6,False
+corr_8_6_4,PASIGA,4,8-6-4,distrito_pa_8_6,False
+corr_8_6_5,UNION SANTEÑA,5,8-6-5,distrito_pa_8_6,False
+corr_8_8_1,SAN FELIPE,1,8-8-1,distrito_pa_8_8,False
+corr_8_8_2,EL CHORRILLO,2,8-8-2,distrito_pa_8_8,False
+corr_8_8_3,SANTA ANA,3,8-8-3,distrito_pa_8_8,False
+corr_8_8_4,LA EXPOSICION O CALIDONIA,4,8-8-4,distrito_pa_8_8,False
+corr_8_8_5,CURUNDU,5,8-8-5,distrito_pa_8_8,False
+corr_8_8_6,BETANIA,6,8-8-6,distrito_pa_8_8,False
+corr_8_8_7,BELLA VISTA,7,8-8-7,distrito_pa_8_8,False
+corr_8_8_8,PUEBLO NUEVO,8,8-8-8,distrito_pa_8_8,False
+corr_8_8_9,SAN FRANCISCO,9,8-8-9,distrito_pa_8_8,False
+corr_8_8_10,PARQUE LEFEVRE,10,8-8-10,distrito_pa_8_8,False
+corr_8_8_11,RIO ABAJO,11,8-8-11,distrito_pa_8_8,False
+corr_8_8_12,JUAN DIAZ,12,8-8-12,distrito_pa_8_8,False
+corr_8_8_13,PEDREGAL,13,8-8-13,distrito_pa_8_8,False
+corr_8_8_14,ANCON,14,8-8-14,distrito_pa_8_8,False
+corr_8_8_15,CHILIBRE,15,8-8-15,distrito_pa_8_8,False
+corr_8_8_16,LAS CUMBRES,16,8-8-16,distrito_pa_8_8,False
+corr_8_8_17,PACORA,17,8-8-17,distrito_pa_8_8,False
+corr_8_8_18,SAN MARTIN,18,8-8-18,distrito_pa_8_8,False
+corr_8_8_19,TOCUMEN,19,8-8-19,distrito_pa_8_8,False
+corr_8_8_20,LAS MAQANITAS,20,8-8-20,distrito_pa_8_8,False
+corr_8_8_21,24 DE DICIEMBRE,21,8-8-21,distrito_pa_8_8,False
+corr_8_8_22,ERNESTO CORDOBA CAMPOS,22,8-8-22,distrito_pa_8_8,False
+corr_8_8_23,ALCALDE DIAZ,23,8-8-23,distrito_pa_8_8,False
+corr_8_8_24,CAIMITILLO,24,8-8-24,distrito_pa_8_8,False
+corr_8_8_25,DON BOSCO,25,8-8-25,distrito_pa_8_8,False
+corr_8_8_26,LAS GARZAS,26,8-8-26,distrito_pa_8_8,False
+corr_8_10_1,AMELIA DENIS DE ICAZA,1,8-10-1,distrito_pa_8_10,False
+corr_8_10_2,BELISARIO PORRAS,2,8-10-2,distrito_pa_8_10,False
+corr_8_10_3,JOSE DOMINGO ESPINAR,3,8-10-3,distrito_pa_8_10,False
+corr_8_10_4,MATEO ITURRALDE,4,8-10-4,distrito_pa_8_10,False
+corr_8_10_5,VICTORIANO LORENZO,5,8-10-5,distrito_pa_8_10,False
+corr_8_10_6,ARNULFO ARIAS,6,8-10-6,distrito_pa_8_10,False
+corr_8_10_7,BELISARIO FRIAS,7,8-10-7,distrito_pa_8_10,False
+corr_8_10_8,OMAR TORRIJOS,8,8-10-8,distrito_pa_8_10,False
+corr_8_10_9,RUFINA ALFARO,9,8-10-9,distrito_pa_8_10,False
+corr_8_11_1,TABOGA (CABECERA),1,8-11-1,distrito_pa_8_11,True
+corr_8_11_2,OTOQUE ORIENTE,2,8-11-2,distrito_pa_8_11,False
+corr_8_11_3,OTOQUE OCCIDENTE,3,8-11-3,distrito_pa_8_11,False
+corr_9_1_1,ATALAYA (CABECERA),1,9-1-1,distrito_pa_9_1,True
+corr_9_1_2,EL BARRITO,2,9-1-2,distrito_pa_9_1,False
+corr_9_1_3,LA MONTAÑUELA,3,9-1-3,distrito_pa_9_1,False
+corr_9_1_4,LA CARRILLO,4,9-1-4,distrito_pa_9_1,False
+corr_9_1_5,SAN ANTONIO,5,9-1-5,distrito_pa_9_1,False
+corr_9_2_1,CALOBRE (CABECERA),1,9-2-1,distrito_pa_9_2,True
+corr_9_2_2,BARNIZAL,2,9-2-2,distrito_pa_9_2,False
+corr_9_2_3,CHITRA,3,9-2-3,distrito_pa_9_2,False
+corr_9_2_4,EL COCLA,4,9-2-4,distrito_pa_9_2,False
+corr_9_2_5,EL POTRERO,5,9-2-5,distrito_pa_9_2,False
+corr_9_2_6,LA LAGUNA,6,9-2-6,distrito_pa_9_2,False
+corr_9_2_7,LA RAYA DE CALOBRE,7,9-2-7,distrito_pa_9_2,False
+corr_9_2_8,LA TETILLA,8,9-2-8,distrito_pa_9_2,False
+corr_9_2_9,LA YEGUADA,9,9-2-9,distrito_pa_9_2,False
+corr_9_2_10,LAS GUIAS,10,9-2-10,distrito_pa_9_2,False
+corr_9_2_11,MONJARAS,11,9-2-11,distrito_pa_9_2,False
+corr_9_2_12,SAN JOSE,12,9-2-12,distrito_pa_9_2,False
+corr_9_3_1,CAÑAZAS (CABECERA),1,9-3-1,distrito_pa_9_3,True
+corr_9_3_2,CERRO PLATA,2,9-3-2,distrito_pa_9_3,False
+corr_9_3_3,EL PICADOR,3,9-3-3,distrito_pa_9_3,False
+corr_9_3_4,LOS VALLES,4,9-3-4,distrito_pa_9_3,False
+corr_9_3_5,SAN JOSE,5,9-3-5,distrito_pa_9_3,False
+corr_9_3_6,SAN MARCELO,6,9-3-6,distrito_pa_9_3,False
+corr_9_3_7,EL AROMILLO,7,9-3-7,distrito_pa_9_3,False
+corr_9_4_1,LA MESA (CABECERA),1,9-4-1,distrito_pa_9_4,True
+corr_9_4_2,BISVALLES,2,9-4-2,distrito_pa_9_4,False
+corr_9_4_3,BORO,3,9-4-3,distrito_pa_9_4,False
+corr_9_4_4,LLANO GRANDE,4,9-4-4,distrito_pa_9_4,False
+corr_9_4_5,SAN BARTOLO,5,9-4-5,distrito_pa_9_4,False
+corr_9_4_6,LOS MILAGROS,6,9-4-6,distrito_pa_9_4,False
+corr_9_5_1,LAS PALMAS (CABECERA),1,9-5-1,distrito_pa_9_5,True
+corr_9_5_2,CERRO DE CASA,2,9-5-2,distrito_pa_9_5,False
+corr_9_5_3,COROZAL,3,9-5-3,distrito_pa_9_5,False
+corr_9_5_4,EL MARIA,4,9-5-4,distrito_pa_9_5,False
+corr_9_5_5,EL PRADO,5,9-5-5,distrito_pa_9_5,False
+corr_9_5_6,EL RINCON,6,9-5-6,distrito_pa_9_5,False
+corr_9_5_7,LOLA,7,9-5-7,distrito_pa_9_5,False
+corr_9_5_8,PIXVAE,8,9-5-8,distrito_pa_9_5,False
+corr_9_5_9,PUERTO VIDAL,9,9-5-9,distrito_pa_9_5,False
+corr_9_5_10,SAN MARTIN DE PORRES,10,9-5-10,distrito_pa_9_5,False
+corr_9_5_11,VIGUI,11,9-5-11,distrito_pa_9_5,False
+corr_9_5_12,ZAPOTILLO,12,9-5-12,distrito_pa_9_5,False
+corr_9_6_1,MONTIJO (CABECERA),1,9-6-1,distrito_pa_9_6,True
+corr_9_6_2,ARENAS,2,9-6-2,distrito_pa_9_6,False
+corr_9_6_3,GOBERNADORA,3,9-6-3,distrito_pa_9_6,False
+corr_9_6_4,LA GARCEANA,4,9-6-4,distrito_pa_9_6,False
+corr_9_6_5,LEONES,5,9-6-5,distrito_pa_9_6,False
+corr_9_6_6,CEBACO,6,9-6-6,distrito_pa_9_6,False
+corr_9_6_7,COSTA HERMOSA,7,9-6-7,distrito_pa_9_6,False
+corr_9_6_8,UNION DEL NORTE,8,9-6-8,distrito_pa_9_6,False
+corr_9_6_9,TEBARIO,9,9-6-9,distrito_pa_9_6,False
+corr_9_6_10,EL PILON,10,9-6-10,distrito_pa_9_6,False
+corr_9_7_1,RIO DE JESUS (CABECERA),1,9-7-1,distrito_pa_9_7,True
+corr_9_7_2,LAS HUACAS,2,9-7-2,distrito_pa_9_7,False
+corr_9_7_3,LOS CASTILLOS,3,9-7-3,distrito_pa_9_7,False
+corr_9_7_4,UTIRA,4,9-7-4,distrito_pa_9_7,False
+corr_9_7_5,CATORCE DE NOVIEMBRE,5,9-7-5,distrito_pa_9_7,False
+corr_9_8_1,SAN FRANCISCO (CABECERA),1,9-8-1,distrito_pa_9_8,True
+corr_9_8_2,CORRAL FALSO,2,9-8-2,distrito_pa_9_8,False
+corr_9_8_3,LOS HATILLOS,3,9-8-3,distrito_pa_9_8,False
+corr_9_8_4,REMANCE,4,9-8-4,distrito_pa_9_8,False
+corr_9_8_5,SAN JUAN,5,9-8-5,distrito_pa_9_8,False
+corr_9_8_6,SAN JOSE,6,9-8-6,distrito_pa_9_8,False
+corr_9_9_1,SANTA FE (CABECERA),1,9-9-1,distrito_pa_9_9,True
+corr_9_9_2,CALOVEBORA,2,9-9-2,distrito_pa_9_9,False
+corr_9_9_3,EL ALTO,3,9-9-3,distrito_pa_9_9,False
+corr_9_9_4,EL CUAY,4,9-9-4,distrito_pa_9_9,False
+corr_9_9_5,EL PANTANO,5,9-9-5,distrito_pa_9_9,False
+corr_9_9_6,GATU O GATUCITO,6,9-9-6,distrito_pa_9_9,False
+corr_9_9_7,RIO LUIS,7,9-9-7,distrito_pa_9_9,False
+corr_9_10_1,SANTIAGO (CABECERA),1,9-10-1,distrito_pa_9_10,True
+corr_9_10_2,LA COLORADA,2,9-10-2,distrito_pa_9_10,False
+corr_9_10_3,LA PEÑA,3,9-10-3,distrito_pa_9_10,False
+corr_9_10_4,LA RAYA DE SANTA MARIA,4,9-10-4,distrito_pa_9_10,False
+corr_9_10_5,PONUGA,5,9-10-5,distrito_pa_9_10,False
+corr_9_10_6,SAN PEDRO DEL ESPINO,6,9-10-6,distrito_pa_9_10,False
+corr_9_10_7,CANTO DEL LLANO,7,9-10-7,distrito_pa_9_10,False
+corr_9_10_8,LOS ALGARROBOS,8,9-10-8,distrito_pa_9_10,False
+corr_9_10_9,CARLOS SANTANA AVILA,9,9-10-9,distrito_pa_9_10,False
+corr_9_10_10,EDWIN FABREGA,10,9-10-10,distrito_pa_9_10,False
+corr_9_10_11,SAN MARTIN DE PORRES,11,9-10-11,distrito_pa_9_10,False
+corr_9_10_12,URRACA,12,9-10-12,distrito_pa_9_10,False
+corr_9_11_1,SONA (CABECERA),1,9-11-1,distrito_pa_9_11,True
+corr_9_11_2,BAHIA HONDA,2,9-11-2,distrito_pa_9_11,False
+corr_9_11_3,CALIDONIA,3,9-11-3,distrito_pa_9_11,False
+corr_9_11_4,CATIVE,4,9-11-4,distrito_pa_9_11,False
+corr_9_11_5,EL MARAÑON,5,9-11-5,distrito_pa_9_11,False
+corr_9_11_6,GUARUMAL,6,9-11-6,distrito_pa_9_11,False
+corr_9_11_7,LA SOLEDAD,7,9-11-7,distrito_pa_9_11,False
+corr_9_11_8,QUEBRADA DE ORO,8,9-11-8,distrito_pa_9_11,False
+corr_9_11_9,RIO GRANDE,9,9-11-9,distrito_pa_9_11,False
+corr_9_11_10,RODEO VIEJO,10,9-11-10,distrito_pa_9_11,False
+corr_9_12_1,LLANO DE CATIVAL O MARIATO (CABECERA),1,9-12-1,distrito_pa_9_12,True
+corr_9_12_2,ARENAS,2,9-12-2,distrito_pa_9_12,False
+corr_9_12_3,EL CACAO,3,9-12-3,distrito_pa_9_12,False
+corr_9_12_4,QUEBRO,4,9-12-4,distrito_pa_9_12,False
+corr_9_12_5,TEBARIO,5,9-12-5,distrito_pa_9_12,False
+corr_10_1_1,NARGANA (CABECERA),1,10-1-1,distrito_pa_10_1,True
+corr_10_1_2,AILIGANDI,2,10-1-2,distrito_pa_10_1,False
+corr_10_1_3,PUERTO OBALDIA,3,10-1-3,distrito_pa_10_1,False
+corr_10_1_4,TUBUALA,4,10-1-4,distrito_pa_10_1,False
+corr_11_1_1,CIRILO GUAINORA (CABECERA),1,11-1-1,distrito_pa_11_1,True
+corr_11_1_2,LAJAS BLANCAS,2,11-1-2,distrito_pa_11_1,False
+corr_11_1_3,MANUEL ORTEGA,3,11-1-3,distrito_pa_11_1,False
+corr_11_2_1,RIO SABALO,1,11-2-1,distrito_pa_11_2,False
+corr_11_2_2,JINGURUDO,2,11-2-2,distrito_pa_11_2,False
+corr_12_1_1,SOLOY (CABECERA),1,12-1-1,distrito_pa_12_1,True
+corr_12_1_2,BOCA DE BALSA,2,12-1-2,distrito_pa_12_1,False
+corr_12_1_3,CAMARON ARRIBA,3,12-1-3,distrito_pa_12_1,False
+corr_12_1_4,CERRO BANCO,4,12-1-4,distrito_pa_12_1,False
+corr_12_1_5,CERRO DE PATENA,5,12-1-5,distrito_pa_12_1,False
+corr_12_1_6,EMPLANADA DE CHORCHA,6,12-1-6,distrito_pa_12_1,False
+corr_12_1_7,NAMNONI,7,12-1-7,distrito_pa_12_1,False
+corr_12_1_8,NIBA,8,12-1-8,distrito_pa_12_1,False
+corr_12_2_1,HATO PILON (CABECERA),1,12-2-1,distrito_pa_12_2,True
+corr_12_2_2,CASCABEL,2,12-2-2,distrito_pa_12_2,False
+corr_12_2_3,HATO COROTU,3,12-2-3,distrito_pa_12_2,False
+corr_12_2_4,HATO CULANTRO,4,12-2-4,distrito_pa_12_2,False
+corr_12_2_5,HATO JOBO,5,12-2-5,distrito_pa_12_2,False
+corr_12_2_6,HATO JULI,6,12-2-6,distrito_pa_12_2,False
+corr_12_2_7,QUEBRADA DE LORO,7,12-2-7,distrito_pa_12_2,False
+corr_12_2_8,SALTO DUPI,8,12-2-8,distrito_pa_12_2,False
+corr_12_3_1,CHICHICA (CABECERA),1,12-3-1,distrito_pa_12_3,True
+corr_12_3_2,ALTO CABALLERO,2,12-3-2,distrito_pa_12_3,False
+corr_12_3_3,BAKAMA,3,12-3-3,distrito_pa_12_3,False
+corr_12_3_4,CERRO CAÑA,4,12-3-4,distrito_pa_12_3,False
+corr_12_3_5,CERRO PUERCO,5,12-3-5,distrito_pa_12_3,False
+corr_12_3_6,KRUA,6,12-3-6,distrito_pa_12_3,False
+corr_12_3_7,MARACA,7,12-3-7,distrito_pa_12_3,False
+corr_12_3_8,NIBRA,8,12-3-8,distrito_pa_12_3,False
+corr_12_3_9,PEÑA BLANCA,9,12-3-9,distrito_pa_12_3,False
+corr_12_3_10,ROKA,10,12-3-10,distrito_pa_12_3,False
+corr_12_3_11,SITIO PRADO,11,12-3-11,distrito_pa_12_3,False
+corr_12_3_12,UMANI,12,12-3-12,distrito_pa_12_3,False
+corr_12_4_1,CERRO IGLESIAS (CABECERA),1,12-4-1,distrito_pa_12_4,True
+corr_12_4_2,HATO CHAMI,2,12-4-2,distrito_pa_12_4,False
+corr_12_4_3,JADEBERI,3,12-4-3,distrito_pa_12_4,False
+corr_12_4_4,LAJERO,4,12-4-4,distrito_pa_12_4,False
+corr_12_4_5,SUSAMA,5,12-4-5,distrito_pa_12_4,False
+corr_12_5_1,BUENOS AIRES (CABECERA),1,12-5-1,distrito_pa_12_5,True
+corr_12_5_2,AGUA DE SALUD,2,12-5-2,distrito_pa_12_5,False
+corr_12_5_3,ALTO DE JESUS,3,12-5-3,distrito_pa_12_5,False
+corr_12_5_4,CERRO PELADO,4,12-5-4,distrito_pa_12_5,False
+corr_12_5_5,EL BALE,5,12-5-5,distrito_pa_12_5,False
+corr_12_5_6,EL PAREDON,6,12-5-6,distrito_pa_12_5,False
+corr_12_5_7,EL PIRO,7,12-5-7,distrito_pa_12_5,False
+corr_12_5_8,GUAYABITO,8,12-5-8,distrito_pa_12_5,False
+corr_12_5_9,GUIBALE,9,12-5-9,distrito_pa_12_5,False
+corr_12_6_1,BISIRA (CABECERA),1,12-6-1,distrito_pa_12_6,True
+corr_12_6_2,BURI,2,12-6-2,distrito_pa_12_6,False
+corr_12_6_3,GUARIVIARA,3,12-6-3,distrito_pa_12_6,False
+corr_12_6_4,GUORONI,4,12-6-4,distrito_pa_12_6,False
+corr_12_6_5,KANKINTU,5,12-6-5,distrito_pa_12_6,False
+corr_12_6_6,MUNUNI,6,12-6-6,distrito_pa_12_6,False
+corr_12_6_7,PIEDRA ROJA,7,12-6-7,distrito_pa_12_6,False
+corr_12_6_8,TUWAI,8,12-6-8,distrito_pa_12_6,False
+corr_12_6_9,MAN CREEK,9,12-6-9,distrito_pa_12_6,False
+corr_12_7_1,KUSAPIN (CABECERA),1,12-7-1,distrito_pa_12_7,True
+corr_12_7_2,BAHIA AZUL,2,12-7-2,distrito_pa_12_7,False
+corr_12_7_3,CALOVEBORA O SANTA CATALINA,3,12-7-3,distrito_pa_12_7,False
+corr_12_7_4,LOMA YUCA,4,12-7-4,distrito_pa_12_7,False
+corr_12_7_5,RIO CHIRIQUI,5,12-7-5,distrito_pa_12_7,False
+corr_12_7_6,TOBOBE,6,12-7-6,distrito_pa_12_7,False
+corr_12_7_7,VALLE BONITO,7,12-7-7,distrito_pa_12_7,False
+corr_13_1_1,ARRAIJAN (CABECERA),1,13-1-1,distrito_pa_13_1,True
+corr_13_1_2,BURUNGA,2,13-1-2,distrito_pa_13_1,False
+corr_13_1_3,CERRO SILVESTRE,3,13-1-3,distrito_pa_13_1,False
+corr_13_1_4,JUAN DEMOSTENES AROSEMENA,4,13-1-4,distrito_pa_13_1,False
+corr_13_1_5,NUEVO EMPERADOR,5,13-1-5,distrito_pa_13_1,False
+corr_13_1_6,SANTA CLARA,6,13-1-6,distrito_pa_13_1,False
+corr_13_1_7,VERACRUZ,7,13-1-7,distrito_pa_13_1,False
+corr_13_1_8,VISTA ALEGRE,8,13-1-8,distrito_pa_13_1,False
+corr_13_2_1,CAPIRA (CABECERA),1,13-2-1,distrito_pa_13_2,True
+corr_13_2_2,CAIMITO,2,13-2-2,distrito_pa_13_2,False
+corr_13_2_3,CAMPANA,3,13-2-3,distrito_pa_13_2,False
+corr_13_2_4,CERMEÑO,4,13-2-4,distrito_pa_13_2,False
+corr_13_2_5,CIRI DE LOS SOTOS,5,13-2-5,distrito_pa_13_2,False
+corr_13_2_6,CIRI GRANDE,6,13-2-6,distrito_pa_13_2,False
+corr_13_2_7,EL CACAO,7,13-2-7,distrito_pa_13_2,False
+corr_13_2_8,LA TRINIDAD,8,13-2-8,distrito_pa_13_2,False
+corr_13_2_9,LAS OLLAS ARRIBA,9,13-2-9,distrito_pa_13_2,False
+corr_13_2_10,LIDICE,10,13-2-10,distrito_pa_13_2,False
+corr_13_2_11,VILLA CARMEN,11,13-2-11,distrito_pa_13_2,False
+corr_13_2_12,VILLA ROSARIO,12,13-2-12,distrito_pa_13_2,False
+corr_13_2_13,SANTA ROSA,13,13-2-13,distrito_pa_13_2,False
+corr_13_3_1,CHAME (CABECERA),1,13-3-1,distrito_pa_13_3,True
+corr_13_3_2,BEJUCO,2,13-3-2,distrito_pa_13_3,False
+corr_13_3_3,BUENOS AIRES,3,13-3-3,distrito_pa_13_3,False
+corr_13_3_4,CABUYA,4,13-3-4,distrito_pa_13_3,False
+corr_13_3_5,CHICA,5,13-3-5,distrito_pa_13_3,False
+corr_13_3_6,EL LIBANO,6,13-3-6,distrito_pa_13_3,False
+corr_13_3_7,LAS LAJAS,7,13-3-7,distrito_pa_13_3,False
+corr_13_3_8,NUEVA GORGONA,8,13-3-8,distrito_pa_13_3,False
+corr_13_3_9,PUNTA CHAME,9,13-3-9,distrito_pa_13_3,False
+corr_13_3_10,SAJALICES,10,13-3-10,distrito_pa_13_3,False
+corr_13_3_11,SORA,11,13-3-11,distrito_pa_13_3,False
+corr_13_4_1,BARRIO BALBOA,1,13-4-1,distrito_pa_13_4,False
+corr_13_4_2,BARRIO COLON,2,13-4-2,distrito_pa_13_4,False
+corr_13_4_3,AMADOR,3,13-4-3,distrito_pa_13_4,False
+corr_13_4_4,AROSEMENA,4,13-4-4,distrito_pa_13_4,False
+corr_13_4_5,EL ARADO,5,13-4-5,distrito_pa_13_4,False
+corr_13_4_6,EL COCO,6,13-4-6,distrito_pa_13_4,False
+corr_13_4_7,FEUILLET,7,13-4-7,distrito_pa_13_4,False
+corr_13_4_8,GUADALUPE,8,13-4-8,distrito_pa_13_4,False
+corr_13_4_9,HERRERA,9,13-4-9,distrito_pa_13_4,False
+corr_13_4_10,HURTADO,10,13-4-10,distrito_pa_13_4,False
+corr_13_4_11,ITURRALDE,11,13-4-11,distrito_pa_13_4,False
+corr_13_4_12,LA REPRESA,12,13-4-12,distrito_pa_13_4,False
+corr_13_4_13,LOS DIAZ,13,13-4-13,distrito_pa_13_4,False
+corr_13_4_14,MENDOZA,14,13-4-14,distrito_pa_13_4,False
+corr_13_4_15,OBALDIA,15,13-4-15,distrito_pa_13_4,False
+corr_13_4_16,PLAYA LEONA,16,13-4-16,distrito_pa_13_4,False
+corr_13_4_17,PUERTO CAIMITO,17,13-4-17,distrito_pa_13_4,False
+corr_13_4_18,SANTA RITA,18,13-4-18,distrito_pa_13_4,False
+corr_13_5_1,SAN CARLOS (CABECERA),1,13-5-1,distrito_pa_13_5,True
+corr_13_5_2,EL ESPINO,2,13-5-2,distrito_pa_13_5,False
+corr_13_5_3,EL HIGO,3,13-5-3,distrito_pa_13_5,False
+corr_13_5_4,GUAYABITO,4,13-5-4,distrito_pa_13_5,False
+corr_13_5_5,LA ERMITA,5,13-5-5,distrito_pa_13_5,False
+corr_13_5_6,LA LAGUNA,6,13-5-6,distrito_pa_13_5,False
+corr_13_5_7,LAS UVAS,7,13-5-7,distrito_pa_13_5,False
+corr_13_5_8,LOS LLANITOS,8,13-5-8,distrito_pa_13_5,False
+corr_13_5_9,SAN JOSE,9,13-5-9,distrito_pa_13_5,False
+

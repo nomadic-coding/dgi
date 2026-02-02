@@ -1,0 +1,15 @@
+id,country_id:id,name,code
+state_pa_1,base.pa,BOCAS DEL TORO,PA-1
+state_pa_2,base.pa,COCLE,PA-2
+state_pa_3,base.pa,COLON,PA-3
+state_pa_4,base.pa,CHIRIQUI,PA-4
+state_pa_5,base.pa,DARIEN,PA-5
+state_pa_6,base.pa,HERRERA,PA-6
+state_pa_7,base.pa,LOS SANTOS,PA-7
+state_pa_8,base.pa,PANAMA,PA-8
+state_pa_9,base.pa,VERAGUAS,PA-9
+state_pa_10,base.pa,COMARCA KUNA YALA,PA-10
+state_pa_11,base.pa,COMARCA EMBERA-WOUNAAN,PA-11
+state_pa_12,base.pa,COMARCA NGÄBE-BUGLÉ,PA-12
+state_pa_13,base.pa,PANAMA OESTE,PA-13
+

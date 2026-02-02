@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Distrito List View -->
+    <record id="view_l10n_pa_distrito_tree" model="ir.ui.view">
+        <field name="name">l10n.pa.distrito.list</field>
+        <field name="model">l10n.pa.distrito</field>
+        <field name="arch" type="xml">
+            <list string="Districts">
+                <field name="code" />
+                <field name="name" />
+                <field name="state_id" />
+                <field name="corregimiento_count" />
+            </list>
+        </field>
+    </record>
+
+    <!-- Distrito Form View -->
+    <record id="view_l10n_pa_distrito_form" model="ir.ui.view">
+        <field name="name">l10n.pa.distrito.form</field>
+        <field name="model">l10n.pa.distrito</field>
+        <field name="arch" type="xml">
+            <form string="District">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name" />
+                            <field name="code" />
+                        </group>
+                        <group>
+                            <field name="state_id" />
+                            <field name="country_id" />
+                            <field name="corregimiento_count" />
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Corregimientos" name="corregimientos">
+                            <field name="corregimiento_ids">
+                                <list>
+                                    <field name="code" />
+                                    <field name="name" />
+                                    <field name="codigo_ubicacion" />
+                                    <field name="is_cabecera" />
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Distrito Search View -->
+    <record id="view_l10n_pa_distrito_search" model="ir.ui.view">
+        <field name="name">l10n.pa.distrito.search</field>
+        <field name="model">l10n.pa.distrito</field>
+        <field name="arch" type="xml">
+            <search string="Search Districts">
+                <field name="name" />
+                <field name="code" />
+                <field name="state_id" />
+                <group expand="0" string="Group By">
+                    <filter string="Province" name="group_province" context="{'group_by': 'state_id'}" />
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Corregimiento List View -->
+    <record id="view_l10n_pa_corregimiento_tree" model="ir.ui.view">
+        <field name="name">l10n.pa.corregimiento.list</field>
+        <field name="model">l10n.pa.corregimiento</field>
+        <field name="arch" type="xml">
+            <list string="Corregimientos">
+                <field name="codigo_ubicacion" />
+                <field name="name" />
+                <field name="distrito_id" />
+                <field name="state_id" />
+                <field name="is_cabecera" />
+            </list>
+        </field>
+    </record>
+
+    <!-- Corregimiento Form View -->
+    <record id="view_l10n_pa_corregimiento_form" model="ir.ui.view">
+        <field name="name">l10n.pa.corregimiento.form</field>
+        <field name="model">l10n.pa.corregimiento</field>
+        <field name="arch" type="xml">
+            <form string="Corregimiento">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name" />
+                            <field name="code" />
+                            <field name="codigo_ubicacion" />
+                            <field name="is_cabecera" />
+                        </group>
+                        <group>
+                            <field name="state_id" />
+                            <field name="distrito_id" />
+                            <field name="country_id" />
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Corregimiento Search View -->
+    <record id="view_l10n_pa_corregimiento_search" model="ir.ui.view">
+        <field name="name">l10n.pa.corregimiento.search</field>
+        <field name="model">l10n.pa.corregimiento</field>
+        <field name="arch" type="xml">
+            <search string="Search Corregimientos">
+                <field name="name" />
+                <field name="codigo_ubicacion" />
+                <field name="distrito_id" />
+                <field name="state_id" />
+                <filter string="Cabecera Only" name="filter_cabecera" domain="[('is_cabecera', '=', True)]" />
+                <group expand="0" string="Group By">
+                    <filter string="Province" name="group_province" context="{'group_by': 'state_id'}" />
+                    <filter string="District" name="group_district" context="{'group_by': 'distrito_id'}" />
+                    <filter string="Cabecera" name="group_cabecera" context="{'group_by': 'is_cabecera'}" />
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Actions -->
+    <record id="action_l10n_pa_distrito" model="ir.actions.act_window">
+        <field name="name">Districts</field>
+        <field name="res_model">l10n.pa.distrito</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create a new district
+            </p>
+            <p>
+                Districts (Distritos) are the second-level administrative divisions in Panama.
+            </p>
+        </field>
+    </record>
+
+    <record id="action_l10n_pa_corregimiento" model="ir.actions.act_window">
+        <field name="name">Corregimientos</field>
+        <field name="res_model">l10n.pa.corregimiento</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'search_default_group_province': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create a new corregimiento
+            </p>
+            <p>
+                Corregimientos are the third-level administrative divisions in Panama.
+            </p>
+        </field>
+    </record>
+
+    <!-- Menu Items -->
+    <menuitem id="menu_l10n_pa_location_root" name="Panama Locations" parent="contacts.res_partner_menu_config"
+              sequence="50" />
+
+    <menuitem id="menu_l10n_pa_distrito" name="Districts" parent="menu_l10n_pa_location_root"
+              action="action_l10n_pa_distrito" sequence="10" />
+
+    <menuitem id="menu_l10n_pa_corregimiento" name="Corregimientos" parent="menu_l10n_pa_location_root"
+              action="action_l10n_pa_corregimiento" sequence="20" />
+
+</odoo>

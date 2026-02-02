@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Country Form View -->
+    <record id="view_country_form_dgi" model="ir.ui.view">
+        <field name="name">res.country.form.dgi</field>
+        <field name="model">res.country</field>
+        <field name="inherit_id" ref="base.view_country_form"/>
+        <field name="arch" type="xml">
+            <field name="code" position="after">
+                <field name="dgi_code_id" groups="base.group_no_one"/>
+            </field>
+        </field>
+    </record>
+</odoo>
+
