@@ -239,12 +239,14 @@ class AccountMove(models.Model):
             )
 
         # Check all invoice lines for product and UOM codes
-        for line in self.invoice_line_ids.filtered(lambda l: not l.display_type):
-            if not line.product_id.dgi_code_id:
-                errors.append(
-                    _("Product DGI code is not set for product '%s' (line: %s)")
-                    % (line.product_id.name or _("Unknown"), line.name or line.id)
-                )
+        for line in self.invoice_line_ids.filtered(
+            lambda l: l.display_type == "product" and l.product_uom_id
+        ):
+            # if not line.product_id.dgi_code_id:
+            #     errors.append(
+            #         _("Product DGI code is not set for product '%s' (line: %s)")
+            #         % (line.product_id.name or _("Unknown"), line.name or line.id)
+            #     )
             if not line.product_uom_id.dgi_code_id:
                 errors.append(
                     _("UOM DGI code is not set for UOM '%s' (line: %s)")
@@ -710,7 +712,9 @@ class AccountMove(models.Model):
 
         # Prepare invoice line items
         lista_items = []
-        for line in self.invoice_line_ids:
+        for line in self.invoice_line_ids.filtered(
+            lambda l: l.display_type == "product"
+        ):
             item = {
                 "descripcion": line.name or line.product_id.name or "",
                 "cantidad": "{:.2f}".format(line.quantity),
@@ -728,6 +732,9 @@ class AccountMove(models.Model):
 
             # Add UOM if available
             item["unidadMedida"] = line.product_uom_id.dgi_code_id.code
+
+            if line.is_downpayment:
+                item["unidadMedida"] = "und"
 
             if line.move_id.partner_id.dgi_tipo_cliente_fe == "03":
                 item["codigoCPBS"] = line.product_id.dgi_code_id.code
