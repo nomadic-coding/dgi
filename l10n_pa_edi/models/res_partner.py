@@ -317,7 +317,9 @@ class ResPartner(models.Model):
                 {
                     "tipoContribuyente": self.dgi_tipo_contribuyente or "1",
                     "numeroRUC": (self.vat or "")[:20],  # Max 20 chars
-                    "digitoVerificadorRUC": (self.dgi_dv or "")[:2],  # Max 2 digits
+                    "digitoVerificadorRUC": (self.dgi_dv or "")
+                    .strip()
+                    .zfill(2)[:2],  # Max 2 digits, pad single digit with 0
                     "razonSocial": (self.dgi_razon_social or self.name or "")[
                         :200
                     ],  # Max 200 chars
