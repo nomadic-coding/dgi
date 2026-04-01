@@ -58,10 +58,10 @@ class DgiAnulacionWizard(models.TransientModel):
             motivo_clean = record.motivo_anulacion.strip()
             motivo_length = len(motivo_clean)
 
-            if motivo_length < 10:
+            if motivo_length < 20:
                 raise UserError(
                     _(
-                        "Cancellation reason must be at least 10 characters long. Current length: %d characters."
+                        "Cancellation reason must be at least 20 characters long. Current length: %d characters."
                     )
                     % motivo_length
                 )

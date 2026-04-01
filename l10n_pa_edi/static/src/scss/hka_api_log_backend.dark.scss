@@ -1,0 +1,12 @@
+// Dark mode — override CSS variables only (see web.assets_web_dark)
+
+.o_hka_api_log_payload {
+    --HkaApiLog-bg: #{$o-gray-800};
+    --HkaApiLog-border: #{$o-gray-700};
+    --HkaApiLog-color: #{$o-gray-100};
+
+    &--alert {
+        --HkaApiLog-bg: #{mix($o-gray-800, $warning, 82%)};
+        --HkaApiLog-border: #{mix($o-gray-600, $warning, 40%)};
+    }
+}

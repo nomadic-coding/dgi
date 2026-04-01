@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
 
 import logging
+from collections import defaultdict
 
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
+from odoo.tools.float_utils import float_compare
+from odoo.tools.mail import html2plaintext
 
 _logger = logging.getLogger(__name__)
 
@@ -199,6 +202,486 @@ class AccountMove(models.Model):
 
         # Format: YYYY-MM-DDThh:mm:ss-05:00 (Panama is always UTC-5)
         return date_value.strftime("%Y-%m-%dT%H:%M:%S-05:00")
+
+    def _prepare_dgi_informacion_interes(self):
+        """Plain text for HKA (narration is HTML); line breaks as U+2028 LINE SEPARATOR."""
+        self.ensure_one()
+        line_sep = "\u2028"
+        parts = []
+        ref = (self.ref or "").strip()
+        narration = (self.narration or "").strip()
+        if ref:
+            parts.append("Customer Reference: " + html2plaintext(ref).strip())
+        if narration:
+            marked = (
+                narration.replace("</p>", "</p>\n")
+                .replace("<br>", "\n")
+                .replace("<br/>", "\n")
+                .replace("<br />", "\n")
+            )
+            parts.append(html2plaintext(marked).strip())
+        if not parts:
+            return ""
+        plain = "\n\n".join(p for p in parts if p)
+        plain = plain.replace("\r\n", "\n").replace("\r", "\n")
+        plain = plain.replace("\n", line_sep)
+        return plain.strip()[:5000]
+
+    def _hka_normalize_lista_item_descripcion(self, raw, max_len=500, truncate=True):
+        """Description text for listaItems; newlines -> U+2028 (invoice line names are plain)."""
+        if not raw:
+            return ""
+        plain = str(raw).strip()
+        if not plain:
+            return ""
+        plain = plain.replace("\r\n", "\n").replace("\r", "\n")
+        plain = plain.replace("\n", "\u2028")
+        if truncate and max_len:
+            return plain[:max_len]
+        return plain
+
+    def _hka_sync_item_valor_total(self, item):
+        """valorTotal must match precioItem + valorITBMS + valorISC (HKA)."""
+        base = float(item["precioItem"])
+        itbms = float(item.get("valorITBMS") or 0)
+        isc = float(item.get("valorISC") or 0)
+        item["valorTotal"] = "{:.2f}".format(self.currency_id.round(base + itbms + isc))
+
+    def _hka_parse_tax_totals_for_hka(self, tax_totals_dict):
+        """Read Odoo tax_totals: merge groups by ITBMS tasa (00–03) / ISC rate, signed amounts.
+
+        ITBMS: merged by tasa. ISC (04): merged by ``hka_tax_isc_id.rate`` (same tasaISC on HKA),
+        so multiple taxes pointing at the same rate share one consolidated row.
+        """
+        self.ensure_one()
+        itbms_acc = defaultdict(lambda: [0.0, 0.0])  # base, tax
+        isc_acc = defaultdict(lambda: [0.0, 0.0])
+        unmapped = []
+
+        if not isinstance(tax_totals_dict, dict) or not tax_totals_dict:
+            return {
+                "itbms_rows": [],
+                "isc_rows": [],
+                "total_itbms": 0.0,
+                "total_isc": 0.0,
+            }
+
+        for subtotal in tax_totals_dict.get("subtotals") or []:
+            for tg in subtotal.get("tax_groups") or []:
+                involved = tg.get("involved_tax_ids") or []
+                base = float(tg.get("base_amount_currency") or 0.0)
+                tax_amt = float(tg.get("tax_amount_currency") or 0.0)
+                if self.currency_id.is_zero(base) and self.currency_id.is_zero(tax_amt):
+                    continue
+
+                tax = None
+                for tid in involved:
+                    t = self.env["account.tax"].browse(tid)
+                    if t and t.exists() and t.hka_tax_code:
+                        tax = t
+                        break
+
+                if not tax:
+                    label = (
+                        tg.get("group_name")
+                        or tg.get("tax_group_name")
+                        or _("Unknown tax group")
+                    )
+                    unmapped.append(
+                        _(
+                            "Tax group '%(label)s' has no tax with an HKA code "
+                            "(base=%(base).2f, tax=%(tax).2f)"
+                        )
+                        % {"label": label, "base": base, "tax": tax_amt}
+                    )
+                    continue
+
+                code = tax.hka_tax_code
+                if code in ("00", "01", "02", "03"):
+                    itbms_acc[code][0] += base
+                    itbms_acc[code][1] += tax_amt
+                elif code == "04":
+                    if not tax.hka_tax_isc_id:
+                        unmapped.append(
+                            _("ISC tax '%s' is missing HKA ISC rate configuration")
+                            % tax.display_name
+                        )
+                        continue
+                    base_isc = float(tg.get("base_amount_currency") or 0.0)
+                    if self.currency_id.is_zero(base_isc):
+                        disp_base = tg.get("display_base_amount_currency")
+                        if disp_base is not False and disp_base is not None:
+                            base_isc = float(disp_base or 0.0)
+                    rate_key = round(float(tax.hka_tax_isc_id.rate), 6)
+                    isc_acc[rate_key][0] += base_isc
+                    isc_acc[rate_key][1] += tax_amt
+                else:
+                    unmapped.append(
+                        _("Tax '%s' uses unsupported HKA code '%s'")
+                        % (tax.display_name, code)
+                    )
+
+        if unmapped:
+            raise UserError(
+                _("Cannot build HKA payload — fix tax mapping:\n%s")
+                % "\n".join("- %s" % m for m in unmapped)
+            )
+
+        itbms_rows = [
+            (
+                tasa,
+                self.currency_id.round(pair[0]),
+                self.currency_id.round(pair[1]),
+            )
+            for tasa, pair in sorted(itbms_acc.items())
+        ]
+
+        isc_rows = [
+            (
+                rate_key,
+                self.currency_id.round(pair[0]),
+                self.currency_id.round(pair[1]),
+            )
+            for rate_key, pair in sorted(isc_acc.items(), key=lambda kv: kv[0])
+        ]
+
+        total_itbms = self.currency_id.round(sum(t for _, _, t in itbms_rows))
+        total_isc = self.currency_id.round(sum(t for _, _, t in isc_rows))
+
+        return {
+            "itbms_rows": itbms_rows,
+            "isc_rows": isc_rows,
+            "total_itbms": total_itbms,
+            "total_isc": total_isc,
+        }
+
+    def _hka_validate_consolidated_items(self, items, tax_parsed):
+        """Ensure consolidated listaItems match the move after rounding adjustments."""
+        self.ensure_one()
+        if not items:
+            raise UserError(
+                _("Cannot send to DGI: consolidated invoice has no line items.")
+            )
+
+        cur = self.currency_id
+        rnd = cur.rounding or 0.01
+
+        sum_b = cur.round(sum(float(x["precioItem"]) for x in items))
+        sum_ib = cur.round(sum(float(x.get("valorITBMS") or 0) for x in items))
+        sum_isc = cur.round(sum(float(x.get("valorISC") or 0) for x in items))
+        sum_tot = cur.round(sum(float(x["valorTotal"]) for x in items))
+
+        if self.move_type == "out_invoice":
+            for it in items:
+                b = float(it["precioItem"])
+                if float_compare(b, 0.0, precision_rounding=rnd) < 0:
+                    raise UserError(
+                        _(
+                            "Cannot send this customer invoice to DGI: consolidated detail has "
+                            "negative net amount (%(amt).2f). Check down payment / tax lines."
+                        )
+                        % {"amt": b}
+                    )
+
+        checks = [
+            (sum_b, self.amount_untaxed, _("untaxed total")),
+            (sum_ib, tax_parsed["total_itbms"], _("ITBMS")),
+            (sum_isc, tax_parsed["total_isc"], _("ISC")),
+            (sum_tot, self.amount_total, _("total with tax")),
+        ]
+        for a, b, label in checks:
+            if float_compare(a, b, precision_rounding=rnd) != 0:
+                raise UserError(
+                    _(
+                        "HKA consolidated payload does not match invoice %(label)s: "
+                        "payload=%(a).2f, move=%(b).2f"
+                    )
+                    % {"label": label, "a": a, "b": b}
+                )
+
+    def _hka_itbms_net_per_tasa_from_lines(self, product_lines):
+        """Signed net ITBMS per HKA tasa (00–03) across all product lines (+ and - qty)."""
+        self.ensure_one()
+        per_tasa = defaultdict(float)
+        for line in product_lines:
+            if not line.tax_ids:
+                continue
+            base_line = self._prepare_product_base_line_for_taxes_computation(line)
+            self.env["account.tax"]._add_tax_details_in_base_line(
+                base_line, self.company_id
+            )
+            for tax_data in base_line.get("tax_details", {}).get("taxes_data", []):
+                tax = tax_data.get("tax")
+                if tax and tax.hka_tax_code in ("00", "01", "02", "03"):
+                    per_tasa[tax.hka_tax_code] += tax_data.get(
+                        "raw_tax_amount_currency", 0.0
+                    )
+        return dict(per_tasa)
+
+    def _hka_reconcile_lista_items_itbms(
+        self, lista_items, product_lines, total_itbms_invoice
+    ):
+        """Per tasaITBMS: spread valorITBMS so each group matches net ITBMS on the move."""
+        self.ensure_one()
+        net_per_tasa = self._hka_itbms_net_per_tasa_from_lines(product_lines)
+        by_tasa = defaultdict(list)
+        for it in lista_items:
+            if "valorITBMS" in it and "tasaITBMS" in it:
+                by_tasa[it["tasaITBMS"]].append(it)
+
+        for tasa, items_g in by_tasa.items():
+            target = self.currency_id.round(net_per_tasa.get(tasa, 0.0))
+            sum_g = sum(float(it["valorITBMS"]) for it in items_g)
+            if abs(self.currency_id.round(sum_g - target)) <= 0.005:
+                for it in items_g:
+                    self._hka_sync_item_valor_total(it)
+                continue
+            if abs(target) <= 0.005:
+                for it in items_g:
+                    it["valorITBMS"] = "{:.2f}".format(0.0)
+                    self._hka_sync_item_valor_total(it)
+                continue
+            if sum_g <= 0:
+                for it in items_g:
+                    self._hka_sync_item_valor_total(it)
+                continue
+            acc = 0.0
+            for idx, it in enumerate(items_g):
+                t = float(it["valorITBMS"])
+                if idx == len(items_g) - 1:
+                    v = self.currency_id.round(target - acc)
+                else:
+                    v = self.currency_id.round(t * target / sum_g)
+                    acc += v
+                it["valorITBMS"] = "{:.2f}".format(v)
+            for it in items_g:
+                self._hka_sync_item_valor_total(it)
+
+        # Rounding drift vs tax_totals total ITBMS (e.g. multiple tasas)
+        items_with = [it for it in lista_items if "valorITBMS" in it]
+        if not items_with:
+            return
+        sum_lines = sum(float(it["valorITBMS"]) for it in items_with)
+        rem = self.currency_id.round(sum_lines - total_itbms_invoice)
+        if abs(rem) > 0.005:
+            last = items_with[-1]
+            last["valorITBMS"] = "{:.2f}".format(
+                self.currency_id.round(float(last["valorITBMS"]) - rem)
+            )
+            self._hka_sync_item_valor_total(last)
+
+    def _hka_itbms_tasa_for_line(self, line):
+        """First ITBMS HKA tasa (00–03) on the line's taxes; default 00 if none."""
+        self.ensure_one()
+        for tax in line.tax_ids:
+            if tax.hka_tax_code in ("00", "01", "02", "03"):
+                return tax.hka_tax_code
+        return "00"
+
+    def _hka_group_item_lines_by_itbms_tasa(self, item_lines):
+        """Positive product lines bucketed by their ITBMS HKA code."""
+        buckets = defaultdict(lambda: self.env["account.move.line"])
+        for line in item_lines:
+            tasa = self._hka_itbms_tasa_for_line(line)
+            buckets[tasa] |= line
+        return buckets
+
+    def _hka_group_item_lines_by_isc_rate(self, item_lines):
+        """Positive lines that carry ISC (04), keyed by rounded ``hka_tax_isc_id.rate`` (tasaISC)."""
+        buckets = defaultdict(lambda: self.env["account.move.line"])
+        for line in item_lines:
+            for tax in line.tax_ids:
+                if tax.hka_tax_code == "04" and tax.hka_tax_isc_id:
+                    rate_key = round(float(tax.hka_tax_isc_id.rate), 6)
+                    buckets[rate_key] |= line
+                    break
+        return buckets
+
+    def _hka_isc_base_per_rate_from_lines(self, product_lines):
+        """Per rounded tasaISC: sum of Odoo ISC bases (``raw_base_amount_currency``) on product lines."""
+        self.ensure_one()
+        per_rate = defaultdict(float)
+        for line in product_lines:
+            if not line.tax_ids:
+                continue
+            base_line = self._prepare_product_base_line_for_taxes_computation(line)
+            self.env["account.tax"]._add_tax_details_in_base_line(
+                base_line, self.company_id
+            )
+            for tax_data in base_line.get("tax_details", {}).get("taxes_data", []):
+                tax = tax_data.get("tax")
+                if tax and tax.hka_tax_code == "04" and tax.hka_tax_isc_id:
+                    rate_key = round(float(tax.hka_tax_isc_id.rate), 6)
+                    per_rate[rate_key] += float(
+                        tax_data.get("raw_base_amount_currency") or 0.0
+                    )
+        return dict(per_rate)
+
+    def _hka_join_descriptions_for_lines(self, lines, fallback):
+        """U+2028-joined line names for listaItems descripcion (max 500)."""
+        self.ensure_one()
+        name_chunks = []
+        for n in lines.mapped("name"):
+            if not n:
+                continue
+            t = self._hka_normalize_lista_item_descripcion(n, truncate=False)
+            if t:
+                name_chunks.append(t)
+        if name_chunks:
+            return "\u2028".join(name_chunks)[:500]
+        return self._hka_normalize_lista_item_descripcion(fallback)
+
+    def _hka_prepare_consolidated_invoice_items(self, item_lines, tax_parsed):
+        """Build listaItems: one row per merged ITBMS tasa / ISC rate (net of all lines).
+
+        Product descriptions are grouped by HKA tax: each row lists only lines sharing
+        that ITBMS tasa or the same ISC ``tasaISC`` (rate).
+
+        ``tax_parsed`` is returned by :meth:`_hka_parse_tax_totals_for_hka`."""
+        self.ensure_one()
+        default_ref = item_lines[0]
+        names_all_fallback = (
+            default_ref.name or default_ref.product_id.name or _("Invoice")
+        )
+        names_desc_all = self._hka_join_descriptions_for_lines(
+            item_lines, names_all_fallback
+        )
+
+        itbms_line_buckets = self._hka_group_item_lines_by_itbms_tasa(item_lines)
+        isc_line_buckets = self._hka_group_item_lines_by_isc_rate(item_lines)
+        isc_base_from_lines = self._hka_isc_base_per_rate_from_lines(item_lines)
+
+        def base_item_dict(ref_line):
+            uom = ref_line.product_uom_id.dgi_code_id.code or "und"
+            it = {
+                "cantidad": "1.00",
+                "unidadMedida": uom,
+            }
+            if ref_line.product_id and ref_line.product_id.default_code:
+                it["codigo"] = ref_line.product_id.default_code
+            if (
+                self.partner_id.dgi_tipo_cliente_fe == "03"
+                and ref_line.product_id
+                and ref_line.product_id.dgi_code_id
+            ):
+                it["codigoCPBS"] = ref_line.product_id.dgi_code_id.code
+                it["codigoCPBSAbrev"] = ref_line.product_id.dgi_code_id.code[:2]
+                it["unidadMedidaCPBS"] = uom
+            return it
+
+        itbms_rows = list(tax_parsed["itbms_rows"])
+        isc_rows = list(tax_parsed["isc_rows"])
+        total_itbms = tax_parsed["total_itbms"]
+        total_isc = tax_parsed["total_isc"]
+
+        isc_carry_net_only = (
+            not itbms_rows
+            and isc_rows
+            and self.currency_id.is_zero(total_itbms)
+            and not self.currency_id.is_zero(self.amount_untaxed)
+        )
+        if not itbms_rows and not self.currency_id.is_zero(self.amount_untaxed):
+            if not isc_carry_net_only:
+                b0 = self.currency_id.round(self.amount_untaxed)
+                itbms_rows = [("00", b0, 0.0)]
+                total_itbms = 0.0
+
+        items = []
+        for tasa, base_raw, tax_raw in itbms_rows:
+            lines_t = itbms_line_buckets.get(tasa, self.env["account.move.line"])
+            ref_line = lines_t[:1] or default_ref
+            fallback_lbl = "%s — %s" % (names_all_fallback, _("ITBMS %s") % tasa)
+            desc = self._hka_join_descriptions_for_lines(lines_t, fallback_lbl).strip()
+            if not desc:
+                desc = (names_desc_all or (_("ITBMS %s") % tasa))[:500]
+            it = base_item_dict(ref_line)
+            it["descripcion"] = desc[:500]
+            b = self.currency_id.round(base_raw)
+            tx = self.currency_id.round(tax_raw)
+            it["precioUnitario"] = "{:.2f}".format(b)
+            it["precioItem"] = "{:.2f}".format(b)
+            it["tasaITBMS"] = tasa
+            it["valorITBMS"] = "{:.2f}".format(tx)
+            it["valorTotal"] = "{:.2f}".format(self.currency_id.round(b + tx))
+            items.append(it)
+
+        for rate_key, base_raw, isc_raw in isc_rows:
+            rate_str = str(rate_key)
+            lines_r = isc_line_buckets.get(rate_key, self.env["account.move.line"])
+            ref_line = lines_r[:1] or default_ref
+            isc_lbl = _("ISC %s") % rate_str
+            fallback_lbl = "%s — %s" % (names_all_fallback, isc_lbl)
+            desc = self._hka_join_descriptions_for_lines(lines_r, fallback_lbl).strip()
+            if not desc:
+                desc = (names_desc_all or isc_lbl)[:500]
+            it = base_item_dict(ref_line)
+            it["descripcion"] = desc[:500]
+            b = self.currency_id.round(base_raw)
+            if (
+                isc_carry_net_only
+                and self.currency_id.is_zero(b)
+            ):
+                bline = isc_base_from_lines.get(rate_key)
+                if bline and not self.currency_id.is_zero(bline):
+                    b = self.currency_id.round(bline)
+            isc_amt = self.currency_id.round(isc_raw)
+            it["precioUnitario"] = "{:.2f}".format(b)
+            it["precioItem"] = "{:.2f}".format(b)
+            it["tasaITBMS"] = "00"
+            it["valorITBMS"] = "{:.2f}".format(0.0)
+            it["tasaISC"] = rate_str
+            it["valorISC"] = "{:.2f}".format(isc_amt)
+            it["valorTotal"] = "{:.2f}".format(self.currency_id.round(b + isc_amt))
+            items.append(it)
+
+        if not items:
+            it = base_item_dict(default_ref)
+            it["descripcion"] = names_desc_all
+            b = self.currency_id.round(self.amount_untaxed)
+            t = self.currency_id.round(total_itbms)
+            it["precioUnitario"] = it["precioItem"] = "{:.2f}".format(b)
+            it["tasaITBMS"] = "00"
+            it["valorITBMS"] = "{:.2f}".format(t)
+            it["valorTotal"] = "{:.2f}".format(self.currency_id.round(b + t))
+            items.append(it)
+
+        sum_b = sum(float(x["precioItem"]) for x in items)
+        sum_ib = sum(float(x.get("valorITBMS") or 0) for x in items)
+        sum_isc = sum(float(x.get("valorISC") or 0) for x in items)
+        db = self.currency_id.round(self.amount_untaxed - sum_b)
+        dit = self.currency_id.round(total_itbms - sum_ib)
+        dis = self.currency_id.round(total_isc - sum_isc)
+        if items and (
+            not self.currency_id.is_zero(db)
+            or not self.currency_id.is_zero(dit)
+            or not self.currency_id.is_zero(dis)
+        ):
+            _logger.debug(
+                "HKA consolidated drift adjustment move=%s db=%s dit=%s dis=%s",
+                self.id,
+                db,
+                dit,
+                dis,
+            )
+            last = items[-1]
+            b = self.currency_id.round(float(last["precioItem"]) + db)
+            last["precioUnitario"] = last["precioItem"] = "{:.2f}".format(b)
+            if "valorITBMS" in last:
+                vi = self.currency_id.round(float(last["valorITBMS"]) + dit)
+                last["valorITBMS"] = "{:.2f}".format(vi)
+            if "valorISC" in last:
+                vs = self.currency_id.round(float(last["valorISC"]) + dis)
+                last["valorISC"] = "{:.2f}".format(vs)
+            last["valorTotal"] = "{:.2f}".format(
+                self.currency_id.round(
+                    float(last["precioItem"])
+                    + float(last.get("valorITBMS") or 0)
+                    + float(last.get("valorISC") or 0)
+                )
+            )
+
+        self._hka_validate_consolidated_items(items, tax_parsed)
+        return items
 
     def _check_mapping_codes(self):
         """Check if all mapping codes are present - collects all errors before raising"""
@@ -684,6 +1167,14 @@ class AccountMove(models.Model):
                 _("Failed to download e-factura XML: %s") % result["error_message"]
             )
 
+    def _hka_line_requires_consolidated_payload(self, line):
+        """Line cannot be sent as-is to HKA: negative quantity or negative untaxed subtotal."""
+        move = line.move_id
+        rnd = move.currency_id.rounding or 0.01
+        if line.quantity < 0:
+            return True
+        return float_compare(line.price_subtotal, 0.0, precision_rounding=rnd) < 0
+
     def _prepare_dgi_document_data(self):
         """Prepare document data for HKA API Enviar method"""
         self.ensure_one()
@@ -707,92 +1198,107 @@ class AccountMove(models.Model):
             "procesoGeneracion": self.hka_proceso_generacion,
             "tipoSucursal": self.hka_tipo_sucursal,
             "cliente": self.partner_id._prepare_dgi_cliente_data(),
-            "informacionInteres": self.ref or "",
+            "informacionInteres": self._prepare_dgi_informacion_interes(),
         }
 
-        # Prepare invoice line items
-        lista_items = []
-        for line in self.invoice_line_ids.filtered(
+        # Prepare invoice line items (exclude qty <= 0: HKA rejects invalid cantidad)
+        product_lines = self.invoice_line_ids.filtered(
             lambda l: l.display_type == "product"
-        ):
-            item = {
-                "descripcion": line.name or line.product_id.name or "",
-                "cantidad": "{:.2f}".format(line.quantity),
-                "precioUnitario": "{:.2f}".format(line.price_unit),
-                "precioItem": "{:.2f}".format(line.price_subtotal),
-                "valorTotal": "{:.2f}".format(line.price_total),
-            }
-            if line.discount > 0:
-                discount_amount = line.price_unit * (line.discount / 100)
-                item["precioUnitarioDescuento"] = "{:.2f}".format(discount_amount)
+        )
+        item_lines = product_lines.filtered(lambda l: l.quantity > 0)
+        consolidate_lines = product_lines.filtered(
+            lambda l: self._hka_line_requires_consolidated_payload(l)
+        )
 
-            # Add product code if available
-            if line.product_id and line.product_id.default_code:
-                item["codigo"] = line.product_id.default_code
-
-            # Add UOM if available
-            item["unidadMedida"] = line.product_uom_id.dgi_code_id.code
-
-            if line.is_downpayment:
-                item["unidadMedida"] = "und"
-
-            if line.move_id.partner_id.dgi_tipo_cliente_fe == "03":
-                item["codigoCPBS"] = line.product_id.dgi_code_id.code
-                item["codigoCPBSAbrev"] = line.product_id.dgi_code_id.code[:2]
-                item["unidadMedidaCPBS"] = line.product_uom_id.dgi_code_id.code
-
-            # Add tax details for this line using Odoo's computed tax information
-            if line.tax_ids:
-                # Prepare base line for tax computation using Odoo's official method
-                base_line = self._prepare_product_base_line_for_taxes_computation(line)
-                # Let Odoo compute detailed tax breakdown
-                self.env["account.tax"]._add_tax_details_in_base_line(
-                    base_line, self.company_id
+        if consolidate_lines and not item_lines:
+            raise UserError(
+                _(
+                    "Cannot send to DGI: invoice has no product line with positive quantity. "
+                    "At least one such line is required when other lines have negative quantity "
+                    "or negative subtotal."
                 )
+            )
 
-                # Extract tax amounts per tax from the computed tax_details
-                for tax_data in base_line.get("tax_details", {}).get("taxes_data", []):
-                    tax = tax_data.get("tax")
-                    if tax and tax.hka_tax_code:
-                        tax_amount = abs(tax_data.get("raw_tax_amount_currency", 0.0))
-
-                        # Add tax information based on HKA code
-                        if tax.hka_tax_code in [
-                            "00",
-                            "01",
-                            "02",
-                            "03",
-                        ]:  # ITBMS variants
-                            item["tasaITBMS"] = tax.hka_tax_code
-                            item["valorITBMS"] = "{:.2f}".format(tax_amount)
-                        elif tax.hka_tax_code == "04":  # ISC
-                            item["tasaISC"] = str(tax.hka_tax_isc_id.rate)
-                            item["valorISC"] = "{:.2f}".format(tax_amount)
-
-            lista_items.append(item)
-
-        # Calculate totals using Odoo's tax_totals (already computed by Odoo)
-        total_itbms = 0.0
-        total_isc = 0.0
-
-        # tax_totals structure: {'subtotals': [{'tax_groups': [...]}]}
-        # tax_totals is a Binary field that Odoo deserializes automatically as dict
+        # tax_totals: merged by HKA tasa / ISC rate; signed amounts match the move net of lines
         tax_totals_dict = self.tax_totals if isinstance(self.tax_totals, dict) else {}
-        if tax_totals_dict:
-            for subtotal in tax_totals_dict.get("subtotals", []):
-                for tax_group in subtotal.get("tax_groups", []):
-                    # Get all tax IDs involved in this group
-                    involved_tax_ids = tax_group.get("involved_tax_ids", [])
-                    tax_amount = tax_group.get("tax_amount_currency", 0.0)
+        tax_parsed = self._hka_parse_tax_totals_for_hka(tax_totals_dict)
+        total_itbms = tax_parsed["total_itbms"]
+        total_isc = tax_parsed["total_isc"]
 
-                    # Map tax_ids to their HKA codes
-                    for tax_id in involved_tax_ids:
-                        tax = self.env["account.tax"].browse(tax_id)
-                        if tax.hka_tax_code in ["00", "01", "02", "03"]:  # ITBMS
-                            total_itbms += abs(tax_amount)
-                        elif tax.hka_tax_code == "04":  # ISC
-                            total_isc += abs(tax_amount)
-                        break  # Only count once per group
+        lista_items = []
+        if consolidate_lines:
+            lista_items = self._hka_prepare_consolidated_invoice_items(
+                item_lines, tax_parsed
+            )
+        else:
+            for line in item_lines:
+                item = {
+                    "descripcion": self._hka_normalize_lista_item_descripcion(
+                        line.name or line.product_id.name or ""
+                    ),
+                    "cantidad": "{:.2f}".format(line.quantity),
+                    "precioUnitario": "{:.2f}".format(line.price_unit),
+                    "precioItem": "{:.2f}".format(line.price_subtotal),
+                    "valorTotal": "{:.2f}".format(line.price_total),
+                }
+                if line.discount > 0:
+                    discount_amount = line.price_unit * (line.discount / 100)
+                    item["precioUnitarioDescuento"] = "{:.2f}".format(discount_amount)
+
+                # Add product code if available
+                if line.product_id and line.product_id.default_code:
+                    item["codigo"] = line.product_id.default_code
+
+                # Add UOM if available
+                item["unidadMedida"] = line.product_uom_id.dgi_code_id.code
+
+                if line.is_downpayment:
+                    item["unidadMedida"] = "und"
+
+                if line.move_id.partner_id.dgi_tipo_cliente_fe == "03":
+                    item["codigoCPBS"] = line.product_id.dgi_code_id.code
+                    item["codigoCPBSAbrev"] = line.product_id.dgi_code_id.code[:2]
+                    item["unidadMedidaCPBS"] = line.product_uom_id.dgi_code_id.code
+
+                # Add tax details for this line using Odoo's computed tax information
+                if line.tax_ids:
+                    # Prepare base line for tax computation using Odoo's official method
+                    base_line = self._prepare_product_base_line_for_taxes_computation(
+                        line
+                    )
+                    # Let Odoo compute detailed tax breakdown
+                    self.env["account.tax"]._add_tax_details_in_base_line(
+                        base_line, self.company_id
+                    )
+
+                    # Extract tax amounts per tax from the computed tax_details
+                    for tax_data in base_line.get("tax_details", {}).get(
+                        "taxes_data", []
+                    ):
+                        tax = tax_data.get("tax")
+                        if tax and tax.hka_tax_code:
+                            tax_amount = abs(
+                                tax_data.get("raw_tax_amount_currency", 0.0)
+                            )
+
+                            # Add tax information based on HKA code
+                            if tax.hka_tax_code in [
+                                "00",
+                                "01",
+                                "02",
+                                "03",
+                            ]:  # ITBMS variants
+                                item["tasaITBMS"] = tax.hka_tax_code
+                                item["valorITBMS"] = "{:.2f}".format(tax_amount)
+                            elif tax.hka_tax_code == "04":  # ISC
+                                item["tasaISC"] = str(tax.hka_tax_isc_id.rate)
+                                item["valorISC"] = "{:.2f}".format(tax_amount)
+
+                lista_items.append(item)
+
+            self._hka_reconcile_lista_items_itbms(
+                lista_items, product_lines, total_itbms
+            )
 
         # Build totalesSubTotales
         totales_sub_totales = {

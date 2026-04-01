@@ -18,11 +18,11 @@
                     </group>
                 </group>
                 <group>
-                    <field name="motivo_anulacion" 
-                           placeholder="Enter the reason for canceling this invoice (minimum 10 characters, maximum 500 characters)..." 
+                    <field name="motivo_anulacion"
+                           placeholder="Enter the reason for canceling this invoice (minimum 10 characters, maximum 500 characters)..."
                            nolabel="0" />
                     <div class="text-muted" style="padding-left: 110px; padding-top: 5px;">
-                        <small>Minimum 10 characters, maximum 500 characters</small>
+                        <small>Minimum 20 characters, maximum 500 characters</small>
                     </div>
                 </group>
                 <footer>
@@ -33,4 +33,3 @@
         </field>
     </record>
 </odoo>
-

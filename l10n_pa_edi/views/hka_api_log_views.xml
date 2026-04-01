@@ -42,21 +42,18 @@
                     </group>
                     <notebook>
                         <page string="Request" name="request">
-                            <div class="o_field_text"
-                                 style="white-space: pre-wrap; font-family: monospace; background-color: #f5f5f5; padding: 10px; border-radius: 4px;">
-                                <field name="request_data" nolabel="1" />
+                            <div class="o_hka_api_log_payload">
+                                <field name="request_data" widget="text" nolabel="1" />
                             </div>
                         </page>
                         <page string="Response" name="response">
-                            <div class="o_field_text"
-                                 style="white-space: pre-wrap; font-family: monospace; background-color: #f5f5f5; padding: 10px; border-radius: 4px;">
-                                <field name="response_data" nolabel="1" />
+                            <div class="o_hka_api_log_payload">
+                                <field name="response_data" widget="text" nolabel="1" />
                             </div>
                         </page>
                         <page string="Error" name="error" invisible="not error_message">
-                            <div class="o_field_text"
-                                 style="white-space: pre-wrap; font-family: monospace; background-color: #fff3cd; padding: 10px; border-radius: 4px;">
-                                <field name="error_message" nolabel="1" />
+                            <div class="o_hka_api_log_payload o_hka_api_log_payload--alert">
+                                <field name="error_message" widget="text" nolabel="1" />
                             </div>
                         </page>
                     </notebook>

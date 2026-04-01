@@ -28,6 +28,14 @@ API Documentation: https://felwiki.thefactoryhka.com.pa/
         "l10n_pa_location",
         "l10n_pa_dgi_code_mapping",
     ],
+    "assets": {
+        "web.assets_backend": [
+            "l10n_pa_edi/static/src/scss/hka_api_log_backend.scss",
+        ],
+        "web.assets_web_dark": [
+            "l10n_pa_edi/static/src/scss/hka_api_log_backend.dark.scss",
+        ],
+    },
     "data": [
         "security/ir.model.access.csv",
         "data/account_tax_isc.xml",
