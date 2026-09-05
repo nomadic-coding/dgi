@@ -89,9 +89,7 @@ class ResPartner(models.Model):
     )
 
     def _prepare_ruc_validation_vals(self, vals):
-        """Drop validation flags unless they come from action_validate_ruc."""
-        if self.env.context.get("dgi_ruc_validation"):
-            return vals
+        """Always drop validation flags from client/ORM writes."""
         vals = dict(vals)
         vals.pop("dgi_ruc_validated", None)
         vals.pop("dgi_ruc_validation_date", None)
@@ -104,6 +102,14 @@ class ResPartner(models.Model):
 
     def write(self, vals):
         return super().write(self._prepare_ruc_validation_vals(vals))
+
+    @api.private
+    def _dgi_set_ruc_validated(self, extra_vals=None):
+        """Set RUC flags after a successful HKA ConsultaRucDv. Not RPC-callable."""
+        vals = dict(extra_vals or {})
+        vals["dgi_ruc_validated"] = True
+        vals.setdefault("dgi_ruc_validation_date", fields.Datetime.now())
+        return super().write(vals)
 
     @api.depends("dgi_ruc_validated", "dgi_tipo_ruc", "country_id", "country_id.code")
     def _compute_tipo_cliente_fe(self):
@@ -202,58 +208,47 @@ class ResPartner(models.Model):
                 )
             )
 
-        try:
-            # Call HKA API
-            hka_api = self.env["l10n_pa_edi.hka_api"]
-            result = hka_api.validate_ruc(self.dgi_ruc, self.dgi_tipo_ruc)
+        hka_api = self.env["l10n_pa_edi.hka_api"]
+        result = hka_api.validate_ruc(
+            self.dgi_ruc,
+            self.dgi_tipo_ruc,
+            company=self.company_id or self.env.company,
+        )
 
-            if result.get("valid"):
-                # Update partner with validated data
-                vals = {
-                    "vat": self.dgi_ruc,
-                    "dgi_ruc_validated": True,
-                    "dgi_ruc_validation_date": fields.Datetime.now(),
-                }
+        if not result.get("valid"):
+            raise UserError(
+                _("RUC validation failed: %s")
+                % result.get("message", "Unknown error")
+            )
 
-                if result.get("dv"):
-                    vals["dgi_dv"] = result.get("dv")
+        vals = {"vat": self.dgi_ruc}
+        if result.get("dv"):
+            vals["dgi_dv"] = result.get("dv")
+        if result.get("tipo_ruc"):
+            tipo_ruc_raw = result.get("tipo_ruc")
+            if tipo_ruc_raw and len(str(tipo_ruc_raw)) != 2:
+                tipo_ruc_raw = str(tipo_ruc_raw).zfill(2)
+            vals["dgi_tipo_ruc"] = tipo_ruc_raw
+        if result.get("razonSocial"):
+            vals["dgi_razon_social"] = result.get("razonSocial")
+            if not self.name:
+                vals["name"] = result.get("razonSocial")
+        if result.get("status"):
+            vals["dgi_taxpayer_status"] = result.get("status")
 
-                if result.get("tipo_ruc"):
-                    tipo_ruc_raw = result.get("tipo_ruc")
-                    if tipo_ruc_raw and len(str(tipo_ruc_raw)) != 2:
-                        tipo_ruc_raw = str(tipo_ruc_raw).zfill(2)
-                    vals["dgi_tipo_ruc"] = tipo_ruc_raw
+        self._dgi_set_ruc_validated(vals)
 
-                if result.get("razonSocial"):
-                    vals["dgi_razon_social"] = result.get("razonSocial")
-                    # Update partner name if empty
-                    if not self.name:
-                        vals["name"] = result.get("razonSocial")
-
-                if result.get("status"):
-                    vals["dgi_taxpayer_status"] = result.get("status")
-
-                self.with_context(dgi_ruc_validation=True).write(vals)
-
-                return {
-                    "type": "ir.actions.client",
-                    "tag": "display_notification",
-                    "params": {
-                        "title": _("Success"),
-                        "message": _("RUC %s validated successfully. DV: %s")
-                        % (self.dgi_ruc, vals.get("dgi_dv", "N/A")),
-                        "type": "success",
-                        "sticky": False,
-                    },
-                }
-            else:
-                raise UserError(
-                    _("RUC validation failed: %s")
-                    % result.get("message", "Unknown error")
-                )
-
-        except Exception as exc:
-            raise UserError(_("Error validating RUC: %s") % str(exc)) from exc
+        return {
+            "type": "ir.actions.client",
+            "tag": "display_notification",
+            "params": {
+                "title": _("Success"),
+                "message": _("RUC %s validated successfully. DV: %s")
+                % (self.dgi_ruc, vals.get("dgi_dv", "N/A")),
+                "type": "success",
+                "sticky": False,
+            },
+        }
 
     def _format_panama_phone_for_dgi(self, phone_number):
         """
@@ -314,128 +309,59 @@ class ResPartner(models.Model):
         elif self.country_id:
             pais_code = "ZZ"
 
-        # Build base cliente data (common for all types)
+        # HKA: omit fields that must not be sent (empty string is still "sent").
         client_vals = {
             "tipoClienteFE": tipo_cliente_fe,
-            "telefono1": phone1[:16] if phone1 else "",  # Max 16 chars
-            "correoElectronico1": self.email[:50] if self.email else "",  # Max 50 chars
-            "correoElectronico2": "",
-            "correoElectronico3": "",
             "pais": pais_code,
         }
+        if phone1:
+            client_vals["telefono1"] = phone1[:16]
+        if self.email:
+            client_vals["correoElectronico1"] = self.email[:50]
 
-        # Add paisOtro if country code is ZZ
         if pais_code == "ZZ":
-            client_vals["paisOtro"] = (
+            pais_otro = (
                 self.dgi_pais_otro or (self.country_id.name if self.country_id else "")
-            )[
-                :50
-            ]  # Max 50 chars
+            )[:50]
+            if pais_otro:
+                client_vals["paisOtro"] = pais_otro
 
-        # Fields for Contribuyente (01) or Gobierno (03)
         if tipo_cliente_fe in ["01", "03"]:
             client_vals.update(
                 {
                     "tipoContribuyente": self.dgi_tipo_contribuyente or "1",
-                    "numeroRUC": (self.vat or "")[:20],  # Max 20 chars
-                    "digitoVerificadorRUC": (self.dgi_dv or "")
-                    .strip()
-                    .zfill(2)[:2],  # Max 2 digits, pad single digit with 0
-                    "razonSocial": (self.dgi_razon_social or self.name or "")[
-                        :200
-                    ],  # Max 200 chars
+                    "numeroRUC": (self.vat or "")[:20],
+                    "digitoVerificadorRUC": (self.dgi_dv or "").strip().zfill(2)[:2],
+                    "razonSocial": (self.dgi_razon_social or self.name or "")[:200],
                     "direccion": (
                         " ".join(filter(None, [self.street or "", self.street2 or ""]))
-                    )[
-                        :100
-                    ],  # Max 100 chars
-                    "codigoUbicacion": (self.l10n_pa_codigo_ubicacion or "")[
-                        :8
-                    ],  # Max 8 chars
-                    "provincia": (self.state_id.name if self.state_id else "")[
-                        :50
-                    ],  # Max 50 chars
+                    )[:100],
+                    "codigoUbicacion": (self.l10n_pa_codigo_ubicacion or "")[:8],
+                    "provincia": (self.state_id.name if self.state_id else "")[:50],
                     "distrito": (
                         self.l10n_pa_distrito_id.name
                         if self.l10n_pa_distrito_id
                         else ""
-                    )[
-                        :50
-                    ],  # Max 50 chars
+                    )[:50],
                     "corregimiento": (
                         self.l10n_pa_corregimiento_id.name
                         if self.l10n_pa_corregimiento_id
                         else ""
-                    )[
-                        :50
-                    ],  # Max 50 chars
+                    )[:50],
                 }
             )
-            # These fields should NOT be sent for contribuyente/gobierno
-            client_vals.update(
-                {
-                    "tipoIdentificacion": "",
-                    "nroIdentificacionExtranjero": "",
-                    "paisExtranjero": "",
-                }
-            )
-
-        # Fields for Consumidor Final (02)
         elif tipo_cliente_fe == "02":
-            # RUC can optionally be filled with ID if customer requests
+            if self.name:
+                client_vals["razonSocial"] = self.name[:200]
             if self.vat:
-                client_vals["numeroRUC"] = (self.vat or "")[:20]
-            # These fields should NOT be sent for consumidor final
-            client_vals.update(
-                {
-                    "tipoContribuyente": "",
-                    "digitoVerificadorRUC": "",
-                    "razonSocial": "",
-                    "direccion": "",
-                    "codigoUbicacion": "",
-                    "provincia": "",
-                    "distrito": "",
-                    "corregimiento": "",
-                    "tipoIdentificacion": "",
-                    "nroIdentificacionExtranjero": "",
-                    "paisExtranjero": "",
-                }
-            )
-
-        # Fields for Extranjero (04)
+                client_vals["numeroRUC"] = self.vat[:20]
         elif tipo_cliente_fe == "04":
-            client_vals.update(
-                {
-                    "tipoIdentificacion": self.dgi_tipo_identificacion_extranjero
-                    or "01",
-                    "nroIdentificacionExtranjero": (self.vat or "")[
-                        :50
-                    ],  # Max 50 chars
-                }
+            client_vals["tipoIdentificacion"] = (
+                self.dgi_tipo_identificacion_extranjero or "01"
             )
-            # Add paisExtranjero only if using passport (tipoIdentificacion = 01)
-            if self.dgi_tipo_identificacion_extranjero == "01":
-                client_vals["paisExtranjero"] = (
-                    self.country_id.name if self.country_id else ""
-                )[
-                    :50
-                ]  # Max 50 chars
-            else:
-                client_vals["paisExtranjero"] = ""
+            if self.vat:
+                client_vals["nroIdentificacionExtranjero"] = self.vat[:50]
+            if self.dgi_tipo_identificacion_extranjero == "01" and self.country_id:
+                client_vals["paisExtranjero"] = (self.country_id.name or "")[:50]
 
-            # These fields should NOT be sent for foreign customers
-            client_vals.update(
-                {
-                    "tipoContribuyente": "",
-                    "numeroRUC": "",
-                    "digitoVerificadorRUC": "",
-                    "razonSocial": "",
-                    "direccion": "",
-                    "codigoUbicacion": "",
-                    "provincia": "",
-                    "distrito": "",
-                    "corregimiento": "",
-                }
-            )
-
-        return client_vals
+        return {key: value for key, value in client_vals.items() if value}

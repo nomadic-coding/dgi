@@ -17,11 +17,9 @@
       <tipoSucursal>2</tipoSucursal>
       <cliente>
         <tipoClienteFE>01</tipoClienteFE>
+        <pais>PA</pais>
         <telefono1>263-1234</telefono1>
         <correoElectronico1>acme@example.com</correoElectronico1>
-        <correoElectronico2/>
-        <correoElectronico3/>
-        <pais>PA</pais>
         <tipoContribuyente>2</tipoContribuyente>
         <numeroRUC>155701888-2-2019</numeroRUC>
         <digitoVerificadorRUC>15</digitoVerificadorRUC>
@@ -31,11 +29,7 @@
         <provincia>PANAMA</provincia>
         <distrito>PANAMA</distrito>
         <corregimiento>SAN FELIPE</corregimiento>
-        <tipoIdentificacion/>
-        <nroIdentificacionExtranjero/>
-        <paisExtranjero/>
       </cliente>
-      <informacionInteres/>
       <listaDocsFiscalReferenciados>
         <docFiscalReferenciado>
           <fechaEmisionDocFiscalReferenciado>2026-03-15T00:00:00-05:00</fechaEmisionDocFiscalReferenciado>

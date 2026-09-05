@@ -12,11 +12,7 @@ from .common import L10nPaEdiTestCommon
 class TestL10nPaEdiAnulacion(L10nPaEdiTestCommon):
     def _sent_invoice(self):
         invoice = self._create_dgi_invoice(partner=self.partner_contribuyente)
-        invoice.write({
-            "dgi_sent": True,
-            "dgi_status": "procesado",
-            "dgi_cufe": "TEST-CUFE-ANULAR",
-        })
+        self._mark_dgi_sent(invoice, dgi_cufe="TEST-CUFE-ANULAR")
         return invoice
 
     def _wizard(self, invoice):
@@ -85,5 +81,12 @@ class TestL10nPaEdiAnulacion(L10nPaEdiTestCommon):
                 wizard.action_anular()
 
         self.assertIn("was not canceled in Odoo", str(error.exception))
+        self.assertEqual(invoice.state, "posted")
+        self.assertEqual(invoice.dgi_status, "procesado")
+
+    def test_force_dgi_cancel_context_does_not_bypass_wizard(self):
+        invoice = self._sent_invoice()
+        with self.assertRaises(UserError):
+            invoice.with_context(force_dgi_cancel=True).button_cancel()
         self.assertEqual(invoice.state, "posted")
         self.assertEqual(invoice.dgi_status, "procesado")

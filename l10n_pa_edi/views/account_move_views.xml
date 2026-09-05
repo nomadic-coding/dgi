@@ -46,6 +46,7 @@
             <!-- Add DGI API Logs smart button -->
             <xpath expr="//div[@name='button_box']" position="inside">
                 <button name="action_view_hka_api_logs" type="object" class="oe_stat_button" icon="fa-list"
+                        groups="account.group_account_manager"
                         invisible="not hka_api_log_count">
                     <field name="hka_api_log_count" widget="statinfo" string="DGI Logs" />
                 </button>
@@ -67,6 +68,8 @@
                             <field name="hka_tipo_operacion" />
                             <field name="hka_destino_operacion" />
                             <field name="hka_forma_pago" />
+                            <field name="hka_tipo_venta" />
+                            <field name="hka_merge_same_dgi_code" />
                         </group>
                         <group>
                             <field name="hka_tipo_sucursal" />

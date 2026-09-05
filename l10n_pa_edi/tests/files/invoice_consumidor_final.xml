@@ -17,24 +17,12 @@
       <tipoSucursal>2</tipoSucursal>
       <cliente>
         <tipoClienteFE>02</tipoClienteFE>
+        <pais>PA</pais>
         <telefono1>263-1234</telefono1>
         <correoElectronico1>juan@example.com</correoElectronico1>
-        <correoElectronico2/>
-        <correoElectronico3/>
-        <pais>PA</pais>
-        <tipoContribuyente/>
-        <digitoVerificadorRUC/>
-        <razonSocial/>
-        <direccion/>
-        <codigoUbicacion/>
-        <provincia/>
-        <distrito/>
-        <corregimiento/>
-        <tipoIdentificacion/>
-        <nroIdentificacionExtranjero/>
-        <paisExtranjero/>
+        <razonSocial>Juan Perez</razonSocial>
       </cliente>
-      <informacionInteres/>
+      <tipoVenta>1</tipoVenta>
     </datosTransaccion>
     <listaItems>
       <item>

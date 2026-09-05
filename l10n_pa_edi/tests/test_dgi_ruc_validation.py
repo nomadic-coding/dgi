@@ -25,6 +25,10 @@ class TestL10nPaEdiRucValidation(L10nPaEdiTestCommon):
         self.assertFalse(partner.dgi_ruc_validated)
         self.assertEqual(partner.dgi_tipo_cliente_fe, "02")
 
+        partner.with_context(dgi_ruc_validation=True).write({"dgi_ruc_validated": True})
+        self.assertFalse(partner.dgi_ruc_validated)
+        self.assertEqual(partner.dgi_tipo_cliente_fe, "02")
+
     def test_validate_ruc_sets_flag(self):
         partner = self.env["res.partner"].create({
             **self._panama_address_vals(),

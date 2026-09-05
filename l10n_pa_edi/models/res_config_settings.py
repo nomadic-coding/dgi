@@ -26,3 +26,7 @@ class ResConfigSettings(models.TransientModel):
         related="company_id.hka_verify_ssl",
         readonly=False,
     )
+    hka_merge_same_dgi_code = fields.Boolean(
+        related="company_id.hka_merge_same_dgi_code",
+        readonly=False,
+    )

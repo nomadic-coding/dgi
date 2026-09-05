@@ -56,6 +56,7 @@ class AccountMove(models.Model):
             ("07", "07 - Generic Debit Note"),
             ("08", "08 - Free Zone Bill"),
             ("09", "09 - Reimbursement"),
+            ("10", "10 - Foreign Operation Bill"),
         ],
         string="Document Type",
         compute="_compute_hka_tipo_documento",
@@ -87,6 +88,19 @@ class AccountMove(models.Model):
         for record in self:
             if record.hka_tipo_documento:
                 record.hka_tipo_documento_manual = True
+
+    @api.onchange("company_id")
+    def _onchange_company_hka_merge_same_dgi_code(self):
+        if self.company_id:
+            self.hka_merge_same_dgi_code = self.company_id.hka_merge_same_dgi_code
+
+    @api.onchange("partner_id")
+    def _onchange_partner_hka_destino_operacion(self):
+        country = self.partner_id.country_id
+        if country and country.code and country.code != "PA":
+            self.hka_destino_operacion = "2"
+        elif country:
+            self.hka_destino_operacion = "1"
 
     hka_naturaleza_operacion = fields.Selection(
         [
@@ -138,6 +152,17 @@ class AccountMove(models.Model):
         string="Generation Process",
         default="1",
     )
+    hka_tipo_venta = fields.Selection(
+        [
+            ("1", "1 - Business Sale"),
+            ("2", "2 - Fixed Asset Sale"),
+            ("3", "3 - Real Estate Sale"),
+            ("4", "4 - Service"),
+        ],
+        string="Sale Type",
+        default="1",
+        help="Required on sales (HKA tipoVenta). Not sent on credit or debit notes.",
+    )
 
     hka_forma_pago = fields.Selection(
         [
@@ -154,6 +179,12 @@ class AccountMove(models.Model):
         ],
         string="Payment Method",
         default="08",
+    )
+    hka_merge_same_dgi_code = fields.Boolean(
+        string="Merge Same DGI Code Lines",
+        default=lambda self: self.env.company.hka_merge_same_dgi_code,
+        help="Group e-factura lines that share the same DGI product/service code "
+        "(and the same ITBMS/ISC) into one line. Defaults from the company setting.",
     )
 
     # DGI Response Fields
@@ -178,6 +209,64 @@ class AccountMove(models.Model):
         string="Authorization Protocol", readonly=True, copy=False
     )
     dgi_error_message = fields.Text(string="Error Message", readonly=True, copy=False)
+
+    _DGI_API_FIELDS = frozenset({
+        "dgi_sent",
+        "dgi_sent_date",
+        "dgi_status",
+        "dgi_cufe",
+        "dgi_qr",
+        "dgi_fecha_recepcion",
+        "dgi_protocolo_autorizacion",
+        "dgi_error_message",
+    })
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        cleaned = []
+        for vals in vals_list:
+            vals = {key: value for key, value in vals.items() if key not in self._DGI_API_FIELDS}
+            if "hka_merge_same_dgi_code" not in vals:
+                company = self.env["res.company"].browse(
+                    vals.get("company_id") or self.env.company.id
+                )
+                vals["hka_merge_same_dgi_code"] = company.hka_merge_same_dgi_code
+            cleaned.append(vals)
+        return super().create(cleaned)
+
+    def write(self, vals):
+        if any(field in vals for field in self._DGI_API_FIELDS):
+            vals = {key: value for key, value in vals.items() if key not in self._DGI_API_FIELDS}
+            if not vals:
+                return True
+        return super().write(vals)
+
+    @api.private
+    def _dgi_write_api_fields(self, vals):
+        """Write DGI response fields. Not RPC-callable."""
+        return super().write(vals)
+
+    def _dgi_commit_api_fields(self, vals):
+        """Write DGI fields now, and commit them on a second cursor when the move is already in DB.
+
+        That keeps CUFE / anulado after an HKA success if the current transaction later
+        rolls back. Uncommitted test records are only visible on this cursor.
+        """
+        self.ensure_one()
+        self._dgi_write_api_fields(vals)
+        try:
+            with self.env.registry.cursor() as cr:
+                env = api.Environment(cr, self.env.uid, {})
+                move = env["account.move"].browse(self.id)
+                if not move.exists():
+                    return
+                move._dgi_write_api_fields(vals)
+                cr.commit()
+        except Exception:
+            _logger.exception(
+                "Could not persist DGI fields on a separate cursor for move %s",
+                self.id,
+            )
 
     def _format_dgi_datetime(self, date_value):
         """
@@ -767,6 +856,47 @@ class AccountMove(models.Model):
                 _("Journal Fiscal Point is not configured for journal %s")
                 % self.journal_id.name
             )
+        elif self.journal_id.dgi_punto_facturacion_fiscal == "000":
+            errors.append(_("Journal Fiscal Point cannot be 000"))
+
+        number = (self.name or "").strip()
+        if number and number != "/" and not (number.isdigit() and len(number) == 10):
+            errors.append(
+                _(
+                    "Fiscal document number must be exactly 10 digits "
+                    "(0000000001 to 9999999999). Current value: %s"
+                )
+                % number
+            )
+
+        pais = ""
+        if self.partner_id.country_id and self.partner_id.country_id.dgi_code_id:
+            pais = self.partner_id.country_id.dgi_code_id.code or ""
+        elif self.partner_id.country_id:
+            pais = "ZZ"
+        if self.hka_destino_operacion == "1" and pais and pais != "PA":
+            errors.append(
+                _(
+                    "Destination is Panama but the receiver country code is %s. "
+                    "Set Destination to Foreign or use a Panama partner."
+                )
+                % pais
+            )
+        if self.hka_destino_operacion == "2" and pais == "PA":
+            errors.append(
+                _(
+                    "Destination is Foreign but the receiver country code is PA. "
+                    "Set Destination to Panama or use a foreign partner."
+                )
+            )
+
+        for line in self.invoice_line_ids.filtered(lambda l: l.display_type == "product"):
+            desc = (line.name or line.product_id.name or "").strip()
+            if desc and len(desc) < 2:
+                errors.append(
+                    _("Line description must be at least 2 characters (HKA). Line: %s")
+                    % desc
+                )
 
         # Raise all errors at once if any found
         if errors:
@@ -806,13 +936,22 @@ class AccountMove(models.Model):
 
         # Validate credit note requirements
         if self.move_type == "out_refund" and self.reversed_entry_id:
-            if not self.reversed_entry_id.dgi_cufe:
+            cufe = self.reversed_entry_id.dgi_cufe or ""
+            if not cufe:
                 raise UserError(
                     _(
                         "Cannot send credit note: Original invoice CUFE not available. "
                         "The original invoice (%s) must be sent to DGI first before creating a credit note."
                     )
                     % self.reversed_entry_id.name
+                )
+            if self.hka_tipo_documento == "04" and len(cufe) != 66:
+                raise UserError(
+                    _(
+                        "Cannot send credit note: referenced CUFE must be 66 characters "
+                        "(HKA cufeFEReferenciada). Current length: %s"
+                    )
+                    % len(cufe)
                 )
             if not self.reversed_entry_id.invoice_date:
                 raise UserError(
@@ -826,12 +965,18 @@ class AccountMove(models.Model):
         """Internal method to send invoice to DGI - shared by manual and auto-send"""
         self.ensure_one()
 
-        # Prepare and send document
+        self.env.cr.execute(
+            "SELECT id FROM account_move WHERE id = %s FOR UPDATE",
+            [self.id],
+        )
+        self.invalidate_recordset(["dgi_sent", "dgi_status", "dgi_cufe"])
+        if self.dgi_sent:
+            raise UserError(_("This document has already been sent to DGI"))
+
         hka_api = self.env["l10n_pa_edi.hka_api"]
         document_data = self._prepare_dgi_document_data()
         result = hka_api.enviar(document_data, move_id=self.id)
 
-        # Prepare fields to write
         fields_to_write = {
             "dgi_status": result["status"],
             "dgi_sent_date": fields.Datetime.now(),
@@ -841,15 +986,12 @@ class AccountMove(models.Model):
             "dgi_fecha_recepcion": result["dgi_fecha_recepcion"],
             "dgi_protocolo_autorizacion": result["dgi_protocolo_autorizacion"],
         }
-
-        # Only set dgi_sent = True on success
         if result["success"]:
             fields_to_write["dgi_sent"] = True
+            self._dgi_commit_api_fields(fields_to_write)
+        else:
+            self._dgi_write_api_fields(fields_to_write)
 
-        # Write all fields at once
-        self.write(fields_to_write)
-
-        # Return result for caller to handle messaging
         return result
 
     def action_send_to_dgi(self):
@@ -1006,40 +1148,32 @@ class AccountMove(models.Model):
 
     @api.depends("dgi_status", "dgi_sent", "move_type", "state")
     def _compute_show_credit_note_button(self):
-        """Hide credit note button if invoice is canceled or sent to DGI"""
+        """Hide the credit note button only after the invoice is canceled in DGI."""
         for move in self:
-            # Default: show button if it's a valid invoice type and posted
             move.show_credit_note_button = (
                 move.move_type in ("out_invoice", "in_invoice")
                 and move.state == "posted"
             )
-            # Hide if canceled in DGI
             if move._is_dgi_anulado():
                 move.show_credit_note_button = False
 
     @api.depends("dgi_status", "dgi_sent")
     def _compute_need_cancel_request(self):
-        """Require cancel request when invoice is successfully sent to DGI"""
+        """Require the DGI wizard while the invoice is still procesado in DGI."""
         super()._compute_need_cancel_request()
         for move in self:
-            # Allow bypassing cancel request check when force_dgi_cancel context is set
-            if self.env.context.get("force_dgi_cancel"):
+            if move.dgi_status == "anulado":
                 move.need_cancel_request = False
-            # If invoice is successfully sent to DGI (procesado), require cancel request
-            # This prevents direct cancellation and forces use of DGI cancellation wizard
             elif move.dgi_status == "procesado" and move.dgi_sent:
                 move.need_cancel_request = True
 
     def _need_cancel_request(self):
-        """Override to require cancel request when invoice is sent to DGI"""
-        # Allow bypassing cancel request check when force_dgi_cancel context is set
-        if self.env.context.get("force_dgi_cancel"):
+        """Block direct cancel of a procesado e-factura; allow it after DGI anulación."""
+        if self.dgi_status == "anulado":
             return False
-        res = super()._need_cancel_request()
-        # If invoice is successfully sent to DGI, require cancel request
         if self.dgi_status == "procesado" and self.dgi_sent:
             return True
-        return res
+        return super()._need_cancel_request()
 
     def button_request_cancel(self):
         """Override to open DGI cancellation wizard when invoice is sent to DGI"""
@@ -1051,6 +1185,8 @@ class AccountMove(models.Model):
     def action_cancel_dgi(self):
         """Open wizard to cancel invoice in DGI"""
         self.ensure_one()
+        if not self.env.user.has_group("account.group_account_manager"):
+            raise UserError(_("Only accounting managers can cancel invoices in DGI."))
         if self._is_dgi_anulado():
             raise UserError(
                 _(
@@ -1088,17 +1224,16 @@ class AccountMove(models.Model):
         return super().button_draft()
 
     def button_cancel(self):
-        """Override to prevent canceling if already canceled in DGI"""
-        # Allow cancellation if force_dgi_cancel context is set (used by DGI cancellation wizard)
-        if not self.env.context.get("force_dgi_cancel"):
-            for move in self:
-                if move._is_dgi_anulado():
-                    raise UserError(
-                        _(
-                            "Cannot cancel: Invoice %s has already been canceled in DGI and cannot be modified."
-                        )
-                        % move.display_name
+        """Block cancel of a live DGI invoice; allow Odoo cancel after DGI anulación."""
+        for move in self:
+            if move.dgi_sent and move.dgi_status == "procesado":
+                raise UserError(
+                    _(
+                        "Cannot cancel: Invoice %s is processed in DGI. "
+                        "Use Cancel Invoice in DGI first."
                     )
+                    % move.display_name
+                )
         return super().button_cancel()
 
     def action_reverse(self):
@@ -1203,6 +1338,204 @@ class AccountMove(models.Model):
                 _("Failed to download e-factura XML: %s") % result["error_message"]
             )
 
+    def _hka_dgi_code_merge_key(self, line):
+        """Group key for same-code merge. Unmapped products stay on their own line."""
+        self.ensure_one()
+        product = line.product_id
+        dgi = product.dgi_code_id if product else False
+        if not dgi:
+            return ("line", line.id)
+        isc_rate = None
+        for tax in line.tax_ids:
+            if tax.hka_tax_code == "04" and tax.hka_tax_isc_id:
+                isc_rate = round(float(tax.hka_tax_isc_id.rate), 6)
+                break
+        uom_id = line.product_uom_id.id if line.product_uom_id else 0
+        return ("code", dgi.id, self._hka_itbms_tasa_for_line(line), isc_rate, uom_id)
+
+    def _hka_line_tax_amounts(self, line):
+        """Signed ITBMS/ISC amounts for one product line."""
+        self.ensure_one()
+        itbms_tasa = None
+        itbms = 0.0
+        isc_rate = None
+        isc = 0.0
+        if not line.tax_ids:
+            return itbms_tasa, itbms, isc_rate, isc
+        base_line = self._prepare_product_base_line_for_taxes_computation(line)
+        self.env["account.tax"]._add_tax_details_in_base_line(base_line, self.company_id)
+        for tax_data in base_line.get("tax_details", {}).get("taxes_data", []):
+            tax = tax_data.get("tax")
+            if not tax or not tax.hka_tax_code:
+                continue
+            amount = tax_data.get("raw_tax_amount_currency", 0.0)
+            if tax.hka_tax_code in ("00", "01", "02", "03"):
+                itbms_tasa = tax.hka_tax_code
+                itbms += amount
+            elif tax.hka_tax_code == "04" and tax.hka_tax_isc_id:
+                isc_rate = tax.hka_tax_isc_id.rate
+                isc += amount
+        return itbms_tasa, itbms, isc_rate, isc
+
+    def _hka_prepare_line_item(self, line):
+        """One HKA listaItems row from a single positive invoice line."""
+        self.ensure_one()
+        item = {
+            "descripcion": self._hka_normalize_lista_item_descripcion(
+                line.name or line.product_id.name or ""
+            ),
+            "cantidad": "{:.2f}".format(line.quantity),
+            "precioUnitario": "{:.2f}".format(line.price_unit),
+            "precioItem": "{:.2f}".format(line.price_subtotal),
+            "valorTotal": "{:.2f}".format(line.price_total),
+        }
+        if line.discount > 0:
+            discount_amount = line.price_unit * (line.discount / 100)
+            item["precioUnitarioDescuento"] = "{:.2f}".format(discount_amount)
+
+        if line.product_id and line.product_id.default_code:
+            item["codigo"] = line.product_id.default_code[:20]
+
+        item["unidadMedida"] = line.product_uom_id.dgi_code_id.code
+
+        if getattr(line, "is_downpayment", False):
+            item["unidadMedida"] = "und"
+
+        item.update(
+            self._hka_cpbs_fields(line.product_id, item.get("unidadMedida"))
+        )
+
+        if line.tax_ids:
+            base_line = self._prepare_product_base_line_for_taxes_computation(line)
+            self.env["account.tax"]._add_tax_details_in_base_line(
+                base_line, self.company_id
+            )
+            for tax_data in base_line.get("tax_details", {}).get("taxes_data", []):
+                tax = tax_data.get("tax")
+                if tax and tax.hka_tax_code:
+                    tax_amount = abs(tax_data.get("raw_tax_amount_currency", 0.0))
+                    if tax.hka_tax_code in ("00", "01", "02", "03"):
+                        item["tasaITBMS"] = tax.hka_tax_code
+                        item["valorITBMS"] = "{:.2f}".format(tax_amount)
+                    elif tax.hka_tax_code == "04":
+                        item["tasaISC"] = str(tax.hka_tax_isc_id.rate)
+                        item["valorISC"] = "{:.2f}".format(tax_amount)
+        item.setdefault("tasaITBMS", "00")
+        item.setdefault("valorITBMS", "0.00")
+        return item
+
+    def _hka_format_merged_unit_price(self, precio_item, qty):
+        """Pick a unit price so cantidad * precioUnitario == precioItem (HKA)."""
+        if qty <= 0:
+            return None
+        for decimals in (2, 3, 4, 5, 6):
+            unit = round(precio_item / qty, decimals)
+            if abs(self.currency_id.round(unit * qty) - precio_item) < 0.005:
+                return ("%%.%df" % decimals) % unit
+        return None
+
+    def _hka_positive_qty_lines_for_merge(self, lines):
+        """Lines that contribute quantity to a merged e-factura item."""
+        self.ensure_one()
+        rnd = self.currency_id.rounding or 0.01
+        return lines.filtered(
+            lambda line: line.quantity > 0
+            and float_compare(line.price_subtotal, 0.0, precision_rounding=rnd) >= 0
+        )
+
+    def _hka_prepare_merged_item_from_lines(self, lines):
+        """Net one HKA item from lines that share a DGI code. None if the net is invalid."""
+        self.ensure_one()
+        rnd = self.currency_id.rounding or 0.01
+        pos_lines = self._hka_positive_qty_lines_for_merge(lines)
+        qty = sum(pos_lines.mapped("quantity"))
+        precio_item = self.currency_id.round(sum(lines.mapped("price_subtotal")))
+        if qty <= 0 or float_compare(precio_item, 0.0, precision_rounding=rnd) < 0:
+            return None
+
+        ref = pos_lines[:1] or lines[:1]
+        fallback = ref.name or ref.product_id.name or _("Invoice")
+        unit_str = self._hka_format_merged_unit_price(precio_item, qty)
+        if not unit_str:
+            qty = 1.0
+            unit_str = "{:.2f}".format(precio_item)
+        item = {
+            "descripcion": self._hka_join_descriptions_for_lines(lines, fallback),
+            "cantidad": "{:.2f}".format(qty),
+            "precioUnitario": unit_str,
+            "precioItem": "{:.2f}".format(precio_item),
+            "valorTotal": "{:.2f}".format(
+                self.currency_id.round(sum(lines.mapped("price_total")))
+            ),
+        }
+        codes = {
+            product.default_code
+            for product in lines.mapped("product_id")
+            if product.default_code
+        }
+        if len(codes) == 1:
+            item["codigo"] = codes.pop()[:20]
+        elif ref.product_id and ref.product_id.default_code:
+            item["codigo"] = ref.product_id.default_code[:20]
+
+        if any(getattr(line, "is_downpayment", False) for line in lines):
+            item["unidadMedida"] = "und"
+        else:
+            uoms = {
+                line.product_uom_id.dgi_code_id.code
+                for line in pos_lines
+                if line.product_uom_id.dgi_code_id
+            }
+            if len(uoms) == 1:
+                item["unidadMedida"] = uoms.pop()
+            elif ref.product_uom_id.dgi_code_id:
+                item["unidadMedida"] = ref.product_uom_id.dgi_code_id.code
+            else:
+                item["unidadMedida"] = "und"
+
+        item.update(self._hka_cpbs_fields(ref.product_id, item.get("unidadMedida")))
+
+        itbms_tasa = None
+        itbms = 0.0
+        isc_rate = None
+        isc = 0.0
+        for line in lines:
+            line_tasa, line_itbms, line_isc_rate, line_isc = self._hka_line_tax_amounts(
+                line
+            )
+            if line_tasa:
+                itbms_tasa = line_tasa
+                itbms += line_itbms
+            if line_isc_rate is not None:
+                isc_rate = line_isc_rate
+                isc += line_isc
+        item["tasaITBMS"] = itbms_tasa or "00"
+        item["valorITBMS"] = "{:.2f}".format(self.currency_id.round(itbms))
+        if isc_rate is not None:
+            item["tasaISC"] = str(isc_rate)
+            item["valorISC"] = "{:.2f}".format(self.currency_id.round(isc))
+        return item
+
+    def _hka_prepare_merged_items_by_dgi_code(self, product_lines):
+        """One listaItems row per DGI code (+ tax). None if a group cannot be sent as-is."""
+        self.ensure_one()
+        groups = defaultdict(lambda: self.env["account.move.line"])
+        for line in product_lines:
+            groups[self._hka_dgi_code_merge_key(line)] |= line
+
+        items = []
+        for _key, lines in sorted(groups.items(), key=lambda kv: min(kv[1].ids)):
+            if len(lines) == 1 and not self._hka_line_requires_consolidated_payload(
+                lines
+            ):
+                items.append(self._hka_prepare_line_item(lines))
+                continue
+            item = self._hka_prepare_merged_item_from_lines(lines)
+            if item is None:
+                return None
+            items.append(item)
+        return items
+
     def _hka_line_requires_consolidated_payload(self, line):
         """Line cannot be sent as-is to HKA: negative quantity or negative untaxed subtotal."""
         move = line.move_id
@@ -1234,8 +1567,12 @@ class AccountMove(models.Model):
             "procesoGeneracion": self.hka_proceso_generacion,
             "tipoSucursal": self.hka_tipo_sucursal,
             "cliente": self.partner_id._prepare_dgi_cliente_data(),
-            "informacionInteres": self._prepare_dgi_informacion_interes(),
         }
+        if self.move_type == "out_invoice" and self.hka_tipo_venta:
+            datos_transaccion["tipoVenta"] = self.hka_tipo_venta
+        interes = self._prepare_dgi_informacion_interes()
+        if interes:
+            datos_transaccion["informacionInteres"] = interes
 
         # Prepare invoice line items (exclude qty <= 0: HKA rejects invalid cantidad)
         product_lines = self.invoice_line_ids.filtered(
@@ -1262,79 +1599,29 @@ class AccountMove(models.Model):
         total_isc = tax_parsed["total_isc"]
 
         lista_items = []
-        if consolidate_lines:
+        merged_items = None
+        if self.hka_merge_same_dgi_code:
+            merged_items = self._hka_prepare_merged_items_by_dgi_code(product_lines)
+        if merged_items:
+            lista_items = merged_items
+            self._hka_reconcile_lista_items_itbms(
+                lista_items, product_lines, total_itbms
+            )
+        elif consolidate_lines:
             lista_items = self._hka_prepare_consolidated_invoice_items(
                 item_lines, tax_parsed
             )
         else:
-            for line in item_lines:
-                item = {
-                    "descripcion": self._hka_normalize_lista_item_descripcion(
-                        line.name or line.product_id.name or ""
-                    ),
-                    "cantidad": "{:.2f}".format(line.quantity),
-                    "precioUnitario": "{:.2f}".format(line.price_unit),
-                    "precioItem": "{:.2f}".format(line.price_subtotal),
-                    "valorTotal": "{:.2f}".format(line.price_total),
-                }
-                if line.discount > 0:
-                    discount_amount = line.price_unit * (line.discount / 100)
-                    item["precioUnitarioDescuento"] = "{:.2f}".format(discount_amount)
-
-                # Add product code if available
-                if line.product_id and line.product_id.default_code:
-                    item["codigo"] = line.product_id.default_code
-
-                # Add UOM if available
-                item["unidadMedida"] = line.product_uom_id.dgi_code_id.code
-
-                if getattr(line, "is_downpayment", False):
-                    item["unidadMedida"] = "und"
-
-                item.update(
-                    self._hka_cpbs_fields(
-                        line.product_id, item.get("unidadMedida")
-                    )
-                )
-
-                # Add tax details for this line using Odoo's computed tax information
-                if line.tax_ids:
-                    # Prepare base line for tax computation using Odoo's official method
-                    base_line = self._prepare_product_base_line_for_taxes_computation(
-                        line
-                    )
-                    # Let Odoo compute detailed tax breakdown
-                    self.env["account.tax"]._add_tax_details_in_base_line(
-                        base_line, self.company_id
-                    )
-
-                    # Extract tax amounts per tax from the computed tax_details
-                    for tax_data in base_line.get("tax_details", {}).get(
-                        "taxes_data", []
-                    ):
-                        tax = tax_data.get("tax")
-                        if tax and tax.hka_tax_code:
-                            tax_amount = abs(
-                                tax_data.get("raw_tax_amount_currency", 0.0)
-                            )
-
-                            # Add tax information based on HKA code
-                            if tax.hka_tax_code in [
-                                "00",
-                                "01",
-                                "02",
-                                "03",
-                            ]:  # ITBMS variants
-                                item["tasaITBMS"] = tax.hka_tax_code
-                                item["valorITBMS"] = "{:.2f}".format(tax_amount)
-                            elif tax.hka_tax_code == "04":  # ISC
-                                item["tasaISC"] = str(tax.hka_tax_isc_id.rate)
-                                item["valorISC"] = "{:.2f}".format(tax_amount)
-
-                lista_items.append(item)
-
+            lista_items = [
+                self._hka_prepare_line_item(line) for line in item_lines
+            ]
             self._hka_reconcile_lista_items_itbms(
                 lista_items, product_lines, total_itbms
+            )
+
+        if not lista_items:
+            raise UserError(
+                _("Cannot send to DGI: invoice has no product lines for e-factura items.")
             )
 
         # Build totalesSubTotales
@@ -1359,17 +1646,32 @@ class AccountMove(models.Model):
         if total_isc > 0:
             totales_sub_totales["totalISC"] = "{:.2f}".format(total_isc)
 
-        if self.partner_id.dgi_tipo_cliente_fe == "04":
-            if not self.invoice_incoterm_id.dgi_code_id:
+        if (
+            self.hka_destino_operacion == "2"
+            or self.partner_id.dgi_tipo_cliente_fe == "04"
+        ):
+            if not self.invoice_incoterm_id or not self.invoice_incoterm_id.dgi_code_id:
                 raise UserError(
                     _("Incoterm DGI code is not set for incoterm %s")
-                    % self.invoice_incoterm_id.name
+                    % (self.invoice_incoterm_id.name if self.invoice_incoterm_id else "")
                 )
-
-            datos_transaccion["datosFacturaExportacion"] = {
+            export_vals = {
                 "condicionesEntrega": self.invoice_incoterm_id.dgi_code_id.code,
                 "monedaOperExportacion": self.currency_id.dgi_code_id.code,
             }
+            if self.currency_id.name != "USD":
+                usd = self.env.ref("base.USD")
+                rate = self.currency_id._convert(
+                    1.0,
+                    usd,
+                    self.company_id,
+                    self.invoice_date or fields.Date.context_today(self),
+                )
+                export_vals["tipoDeCambio"] = "{:.4f}".format(rate)
+                export_vals["montoMonedaExtranjera"] = "{:.4f}".format(
+                    rate * self.amount_total
+                )
+            datos_transaccion["datosFacturaExportacion"] = export_vals
 
         # Add referenced fiscal documents if this is a refund (credit note)
         lista_docs_fiscal_referenciados = []
@@ -1473,6 +1775,8 @@ class AccountMove(models.Model):
     def action_view_hka_api_logs(self):
         """Open the API logs for this invoice."""
         self.ensure_one()
+        if not self.env.user.has_group("account.group_account_manager"):
+            raise UserError(_("Only accounting managers can open HKA API logs."))
         return {
             "type": "ir.actions.act_window",
             "name": "HKA API Logs",

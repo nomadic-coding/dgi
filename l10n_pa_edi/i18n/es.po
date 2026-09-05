@@ -133,3 +133,38 @@ msgstr "Si el código de impuesto HKA es '04' (ISC), también debe configurar la
 #: code:addons/l10n_pa_edi/models/account_move.py:0
 msgid "Product DGI/CPBS code is required when the receiver is a government entity (%s)."
 msgstr "El código DGI/CPBS del producto es obligatorio cuando el receptor es una entidad de gobierno (%s)."
+
+#. module: l10n_pa_edi
+#: model:ir.model.fields,field_description:l10n_pa_edi.field_account_move__hka_merge_same_dgi_code
+#: model:ir.model.fields,field_description:l10n_pa_edi.field_res_company__hka_merge_same_dgi_code
+#: model:ir.model.fields,field_description:l10n_pa_edi.field_res_config_settings__hka_merge_same_dgi_code
+msgid "Sale Type"
+msgstr "Tipo de venta"
+
+#. module: l10n_pa_edi
+#: model:ir.model.fields,field_description:l10n_pa_edi.field_account_move__hka_merge_same_dgi_code
+#: model:ir.model.fields,field_description:l10n_pa_edi.field_res_company__hka_merge_same_dgi_code
+#: model:ir.model.fields,field_description:l10n_pa_edi.field_res_config_settings__hka_merge_same_dgi_code
+msgid "Merge Same DGI Code Lines"
+msgstr "Combinar líneas con el mismo código DGI"
+
+#. module: l10n_pa_edi
+#: model:ir.model.fields,help:l10n_pa_edi.field_account_move__hka_merge_same_dgi_code
+msgid "Group e-factura lines that share the same DGI product/service code (and the same ITBMS/ISC) into one line. Defaults from the company setting."
+msgstr "Agrupa en una sola línea de e-factura las líneas que comparten el mismo código DGI de producto/servicio (y el mismo ITBMS/ISC). El valor inicial sale de la configuración de la compañía."
+
+#. module: l10n_pa_edi
+#: model:ir.model.fields,help:l10n_pa_edi.field_res_company__hka_merge_same_dgi_code
+#: model:ir.model.fields,help:l10n_pa_edi.field_res_config_settings__hka_merge_same_dgi_code
+msgid "Default for new invoices: group e-factura lines that share the same DGI product/service code (and the same ITBMS/ISC) into one line."
+msgstr "Valor predeterminado para facturas nuevas: agrupa en una sola línea de e-factura las líneas que comparten el mismo código DGI de producto/servicio (y el mismo ITBMS/ISC)."
+
+#. module: l10n_pa_edi
+#: model_terms:ir.ui.view,arch_db:l10n_pa_edi.res_config_settings_view_form
+msgid "E-Factura Lines"
+msgstr "Líneas de e-factura"
+
+#. module: l10n_pa_edi
+#: model_terms:ir.ui.view,arch_db:l10n_pa_edi.res_config_settings_view_form
+msgid "Default for new invoices: send one e-factura line per DGI product/service code (same ITBMS/ISC). Can be overridden on each invoice."
+msgstr "Valor predeterminado para facturas nuevas: enviar una línea de e-factura por código DGI de producto/servicio (mismo ITBMS/ISC). Se puede cambiar en cada factura."

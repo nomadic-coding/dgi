@@ -19,6 +19,10 @@ class TestL10nPaEdiJournal(L10nPaEdiTestCommon):
         })
         self.assertEqual(other.dgi_punto_facturacion_fiscal, "001")
 
+    def test_fiscal_point_zero_rejected(self):
+        with self.assertRaises(ValidationError):
+            self.sale_journal.write({"dgi_punto_facturacion_fiscal": "000"})
+
     def test_same_branch_and_punto_rejected(self):
         with self.assertRaises(ValidationError):
             self.env["account.journal"].create({

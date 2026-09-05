@@ -3,7 +3,7 @@
 import logging
 
 from odoo import _, api, fields, models
-from odoo.exceptions import UserError
+from odoo.exceptions import AccessError, UserError
 
 _logger = logging.getLogger(__name__)
 
@@ -96,7 +96,12 @@ class DgiAnulacionWizard(models.TransientModel):
     def action_anular(self):
         """Cancel the invoice in DGI first, then cancel it in Odoo."""
         self.ensure_one()
+        if not self.env.user.has_group("account.group_account_manager"):
+            raise AccessError(_("Only accounting managers can cancel invoices in DGI."))
+
         move = self.move_id
+        move.check_access_rights("write")
+        move.check_access_rule("write")
 
         if not move.dgi_sent:
             raise UserError(_("This invoice has not been sent to DGI yet."))
@@ -133,12 +138,14 @@ class DgiAnulacionWizard(models.TransientModel):
         anulacion_data = {
             "motivoAnulacion": motivo_anulacion_clean,
             "datosDocumento": {
-                "codigoSucursalEmisor": self.codigo_sucursal_emisor or "",
-                "numeroDocumentoFiscal": self.numero_documento_fiscal or "",
-                "puntoFacturacionFiscal": (self.punto_facturacion_fiscal.zfill(3)),
+                "codigoSucursalEmisor": move.journal_id.dgi_codigo_sucursal_emisor or "",
+                "numeroDocumentoFiscal": move.name or "",
+                "puntoFacturacionFiscal": (
+                    move.journal_id.dgi_punto_facturacion_fiscal or "001"
+                ).zfill(3),
                 "serialDispositivo": "",
-                "tipoDocumento": self.tipo_documento,
-                "tipoEmision": self.tipo_emision,
+                "tipoDocumento": move.hka_tipo_documento or "01",
+                "tipoEmision": move.hka_tipo_emision or "01",
             },
         }
 
@@ -159,13 +166,25 @@ class DgiAnulacionWizard(models.TransientModel):
                 % error_message
             )
 
-        move.write(
+        move._dgi_commit_api_fields(
             {
                 "dgi_status": "anulado",
                 "dgi_error_message": False,
             }
         )
-        move.with_context(force_dgi_cancel=True).button_cancel()
+        try:
+            move.button_cancel()
+        except Exception as exc:
+            _logger.exception(
+                "Invoice %s was canceled in DGI but Odoo cancel failed", move.name
+            )
+            raise UserError(
+                _(
+                    "The invoice was canceled in DGI but could not be canceled in Odoo: %s. "
+                    "Do not send this document again; finish the Odoo cancellation manually."
+                )
+                % exc
+            ) from exc
         move.message_post(
             body=_("Invoice successfully canceled in DGI. Reason: %s")
             % self.motivo_anulacion,

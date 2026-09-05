@@ -33,5 +33,6 @@ class TestL10nPaEdiApiLogSecurity(L10nPaEdiTestCommon):
         log = self.env["hka.api.log"].search([("api_method", "=", "enviar")], limit=1)
         self.assertIn("***", log.request_data)
         self.assertNotIn("secret", log.request_data)
+        self.assertNotIn("visible", log.request_data)
         self.assertIn("***", log.response_data)
         self.assertIn("200", log.response_data)

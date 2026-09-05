@@ -30,6 +30,8 @@ Go to **Settings > General Settings > Panama Electronic Invoicing** and configur
 - **HKA Clave**: Your HKA API password
 - **API Timeout**: Request timeout in seconds (default: 30)
 - **Verify SSL**: Enable/disable SSL verification
+- **Merge Same DGI Code Lines**: Default for new invoices; group e-factura lines that share the same DGI product/service code. Override on each invoice's Electronic Invoice (DGI) tab.
+- **Sale Type (`tipoVenta`)**: Required on customer invoices (giro, asset, real estate, or service). Not sent on credit notes.
 
 ## Usage
 

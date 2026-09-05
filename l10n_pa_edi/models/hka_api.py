@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 
 import requests
 from odoo import _, api, models
-from odoo.exceptions import UserError
+from odoo.exceptions import AccessError, UserError
 
 _logger = logging.getLogger(__name__)
 
@@ -27,6 +27,12 @@ class HkaApi(models.AbstractModel):
 
         _auto_map_dgi_catalogs(self.env)
         _auto_map_l10n_pa_taxes(self.env)
+
+    def _check_hka_user_access(self):
+        if not self.env.user.has_group("account.group_account_invoice"):
+            raise AccessError(
+                _("You need invoicing rights to call the HKA electronic invoice API.")
+            )
 
     @api.model
     def _company_from_move(self, move_id=None):
@@ -144,7 +150,7 @@ class HkaApi(models.AbstractModel):
                 auth_token = response.text.strip()
 
             if not auth_token or not isinstance(auth_token, str):
-                _logger.error("Authentication response: %s", response.text[:500])
+                _logger.error("HKA authentication returned no JWT token")
                 raise UserError(
                     _("Authentication successful but no valid JWT token received")
                 )
@@ -153,9 +159,8 @@ class HkaApi(models.AbstractModel):
             return auth_token
 
         except requests.exceptions.HTTPError as exc:
-            error_msg = _("HKA Authentication failed (HTTP %s): %s") % (
-                response.status_code,
-                response.text[:200],
+            error_msg = _("HKA Authentication failed (HTTP %s)") % (
+                response.status_code if "response" in locals() else "?"
             )
             _logger.error(error_msg)
             raise UserError(error_msg) from exc
@@ -223,10 +228,7 @@ class HkaApi(models.AbstractModel):
             else:
                 raise ValueError(f"Unsupported HTTP method: {method}")
 
-            # Log response
-            _logger.info(
-                "HKA API Response: %s - %s", response.status_code, response.text[:500]
-            )
+            _logger.info("HKA API Response: HTTP %s", response.status_code)
 
             response.raise_for_status()
 
@@ -237,12 +239,8 @@ class HkaApi(models.AbstractModel):
                 return response.status_code, {}
 
         except requests.exceptions.HTTPError as exc:
-            # Return status code even on HTTP errors
             status_code = response.status_code if "response" in locals() else None
-            error_msg = _("HKA API request failed (HTTP %s): %s") % (
-                status_code,
-                response.text[:200] if "response" in locals() else str(exc),
-            )
+            error_msg = _("HKA API request failed (HTTP %s)") % (status_code or "?")
             _logger.error(error_msg)
             raise UserError(error_msg) from exc
         except Exception as exc:
@@ -251,7 +249,8 @@ class HkaApi(models.AbstractModel):
             raise UserError(error_msg) from exc
 
     @api.model
-    def validate_ruc(self, ruc, tipo_ruc="02"):
+    @api.private
+    def validate_ruc(self, ruc, tipo_ruc="02", company=None):
         """
         Validate RUC with DGI via HKA API
 
@@ -283,7 +282,7 @@ class HkaApi(models.AbstractModel):
                 "api/ConsultaRucDv",
                 method="POST",
                 data=data,
-                company=self.env.company,
+                company=company or self.env.company,
             )
 
             codigo = response.get("codigo", "")
@@ -327,6 +326,7 @@ class HkaApi(models.AbstractModel):
         return result
 
     @api.model
+    @api.private
     def enviar(self, document_data, move_id=None):
         """
         Send electronic document to DGI via HKA API
@@ -369,6 +369,7 @@ class HkaApi(models.AbstractModel):
             "mensaje": "",
         }
 
+        self._check_hka_user_access()
         try:
             _logger.info("Sending electronic document to HKA API")
             http_status_code, response = self._make_request(
@@ -453,6 +454,7 @@ class HkaApi(models.AbstractModel):
         return result
 
     @api.model
+    @api.private
     def anular(self, anulacion_data, move_id=None):
         """
         Cancel electronic invoice in DGI via HKA API
@@ -499,6 +501,7 @@ class HkaApi(models.AbstractModel):
             "mensaje": "",
         }
 
+        self._check_hka_user_access()
         try:
             _logger.info("Canceling electronic document via HKA API")
             http_status_code, response = self._make_request(
@@ -563,6 +566,7 @@ class HkaApi(models.AbstractModel):
         return result
 
     @api.model
+    @api.private
     def descargar(self, cufe, numero_documento, tipo_archivo="pdf", move_id=None):
         """
         Download electronic invoice from DGI via HKA API
@@ -603,6 +607,7 @@ class HkaApi(models.AbstractModel):
             "error_message": False,
         }
 
+        self._check_hka_user_access()
         try:
             _logger.info("Downloading e-invoice from HKA API: %s", numero_documento)
             http_status_code, response = self._make_request(
@@ -647,10 +652,14 @@ class HkaApi(models.AbstractModel):
         finally:
             # Log API call (automatically uses new cursor to survive transaction rollback)
             duration = (time.time() - start_time) * 1000  # Convert to ms
+            logged_response = response
+            if isinstance(response, dict) and response.get("Archivo"):
+                logged_response = dict(response)
+                logged_response["Archivo"] = "***"
             self.env["hka.api.log"].log_api_call(
                 api_method="descarga",
                 request_data=data,
-                response_data=response,
+                response_data=logged_response,
                 status=status,
                 error_message=error_message,
                 http_status_code=http_status_code,

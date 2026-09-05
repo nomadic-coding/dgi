@@ -74,6 +74,7 @@ class L10nPaEdiTestCommon(AccountTestInvoicingCommon):
             "hka_clave": "test-password",
             "hka_timeout": 30,
             "hka_verify_ssl": True,
+            "hka_merge_same_dgi_code": True,
         })
 
     @classmethod
@@ -118,7 +119,7 @@ class L10nPaEdiTestCommon(AccountTestInvoicingCommon):
     @classmethod
     def _create_partners(cls):
         address = cls._panama_address_vals()
-        Partner = cls.env["res.partner"].with_context(dgi_ruc_validation=True)
+        Partner = cls.env["res.partner"]
         cls.partner_contribuyente = Partner.create({
             **address,
             "name": "Acme Panama SA",
@@ -128,7 +129,11 @@ class L10nPaEdiTestCommon(AccountTestInvoicingCommon):
             "dgi_tipo_ruc": "02",
             "dgi_dv": "15",
             "dgi_razon_social": "ACME PANAMA S.A.",
-            "dgi_ruc_validated": True,
+        })
+        cls.partner_contribuyente._dgi_set_ruc_validated({
+            "vat": "155701888-2-2019",
+            "dgi_dv": "15",
+            "dgi_razon_social": "ACME PANAMA S.A.",
         })
         cls.partner_consumidor_final = cls.env["res.partner"].create({
             **address,
@@ -145,7 +150,11 @@ class L10nPaEdiTestCommon(AccountTestInvoicingCommon):
             "dgi_tipo_ruc": "03",
             "dgi_dv": "08",
             "dgi_razon_social": "MINISTERIO DE ECONOMIA Y FINANZAS",
-            "dgi_ruc_validated": True,
+        })
+        cls.partner_gobierno._dgi_set_ruc_validated({
+            "vat": "123456789-1-2020",
+            "dgi_dv": "08",
+            "dgi_razon_social": "MINISTERIO DE ECONOMIA Y FINANZAS",
         })
 
     @classmethod
@@ -196,6 +205,16 @@ class L10nPaEdiTestCommon(AccountTestInvoicingCommon):
             invoice.action_post()
         return invoice
 
+    def _mark_dgi_sent(self, move, **vals):
+        payload = {
+            "dgi_sent": True,
+            "dgi_status": "procesado",
+            "dgi_cufe": "TEST-CUFE-001",
+        }
+        payload.update(vals)
+        move._dgi_write_api_fields(payload)
+        return move
+
     @classmethod
     def _default_invoice_line_vals(cls):
         return {
@@ -205,6 +224,92 @@ class L10nPaEdiTestCommon(AccountTestInvoicingCommon):
             "price_unit": 1000.0,
             "tax_ids": [Command.set(cls.tax_itbms_7.ids)],
         }
+
+    def _create_sale_final_invoice_with_downpayment(
+        self,
+        partner=None,
+        downpayment_date="2026-03-10",
+        final_date="2026-03-15",
+        downpayment_percent=20.0,
+    ):
+        """Confirm a 1000 service SO, invoice a % down payment, then the deducted remainder."""
+        partner = partner or self.partner_contribuyente
+        self.product_service.invoice_policy = "order"
+        sale_order = self.env["sale.order"].create({
+            "partner_id": partner.id,
+            "journal_id": self.sale_journal.id,
+            "order_line": [Command.create({
+                "product_id": self.product_service.id,
+                "name": "Consulting service",
+                "product_uom_qty": 1,
+                "price_unit": 1000.0,
+            })],
+        })
+        sale_order.action_confirm()
+
+        wizard_ctx = {
+            "active_model": "sale.order",
+            "active_id": sale_order.id,
+            "active_ids": sale_order.ids,
+        }
+        self.env["sale.advance.payment.inv"].with_context(wizard_ctx).create({
+            "advance_payment_method": "percentage",
+            "amount": downpayment_percent,
+        }).create_invoices()
+
+        downpayment = sale_order.invoice_ids
+        downpayment.invoice_date = downpayment_date
+        downpayment.action_post()
+
+        self.env["sale.advance.payment.inv"].with_context(wizard_ctx).create({
+            "advance_payment_method": "delivered",
+            "deduct_down_payments": True,
+        }).create_invoices()
+
+        final = sale_order.invoice_ids.filtered(lambda move: move.id != downpayment.id)
+        final.invoice_date = final_date
+        final.action_post()
+        return sale_order, downpayment, final
+
+    def _create_negative_discount_invoice(
+        self, partner=None, invoice_date="2026-03-15", post=True
+    ):
+        """Invoice with a positive line and a negative commercial-discount line."""
+        return self._create_dgi_invoice(
+            partner=partner,
+            post=post,
+            invoice_date=invoice_date,
+            line_vals=[
+                self._default_invoice_line_vals(),
+                {
+                    "product_id": self.product_service.id,
+                    "name": "Commercial discount",
+                    "quantity": 1,
+                    "price_unit": -100.0,
+                    "tax_ids": [Command.set(self.tax_itbms_7.ids)],
+                },
+            ],
+        )
+
+    def _assert_hka_payload_deducts_negative_lines(self, move, gross_untaxed):
+        payload = move._prepare_dgi_document_data()
+        totales = payload["documento"]["totalesSubTotales"]
+        items = payload["documento"]["listaItems"]
+        self.assertLess(move.amount_untaxed, gross_untaxed)
+        self.assertAlmostEqual(float(totales["totalPrecioNeto"]), move.amount_untaxed)
+        self.assertAlmostEqual(float(totales["totalFactura"]), move.amount_total)
+        self.assertAlmostEqual(
+            sum(float(item["precioItem"]) for item in items),
+            move.amount_untaxed,
+        )
+        self.assertAlmostEqual(
+            sum(float(item["valorTotal"]) for item in items),
+            move.amount_total,
+        )
+        for item in items:
+            self.assertGreater(float(item["cantidad"]), 0)
+            self.assertGreaterEqual(float(item["precioItem"]), 0)
+        return payload
 
     def documento_to_xml_tree(self, payload):
         """Turn the HKA Enviar JSON payload into XML for assertXmlTreeEqual."""

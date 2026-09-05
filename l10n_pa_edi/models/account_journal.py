@@ -113,6 +113,10 @@ class AccountJournal(models.Model):
                 )
                 % {"length": self.DGI_FISCAL_POINT_LENGTH, "value": code or ""}
             )
+        if int(code) == 0:
+            raise ValidationError(
+                _("Fiscal point cannot be zero. Use a value from 001 to 999.")
+            )
 
     def _validate_dgi_sequence(self, journal):
         """Validate that DGI sequence is configured."""

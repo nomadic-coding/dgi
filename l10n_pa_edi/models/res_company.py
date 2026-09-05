@@ -38,6 +38,12 @@ class ResCompany(models.Model):
         string="Verify SSL",
         default=True,
     )
+    hka_merge_same_dgi_code = fields.Boolean(
+        string="Merge Same DGI Code Lines",
+        default=True,
+        help="Default for new invoices: group e-factura lines that share the "
+        "same DGI product/service code (and the same ITBMS/ISC) into one line.",
+    )
     hka_auth_token = fields.Char(
         string="HKA Auth Token",
         groups="base.group_system",

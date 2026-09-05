@@ -1,8 +1,8 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_l10n_pa_edi_hka_api,access_l10n_pa_edi_hka_api,model_l10n_pa_edi_hka_api,base.group_user,1,0,0,0
-access_hka_api_log_user,access_hka_api_log_user,model_hka_api_log,account.group_account_user,1,0,0,0
+access_l10n_pa_edi_hka_api,access_l10n_pa_edi_hka_api,model_l10n_pa_edi_hka_api,account.group_account_invoice,1,0,0,0
+access_hka_api_log_user,access_hka_api_log_user,model_hka_api_log,account.group_account_manager,1,0,0,0
 access_hka_api_log_manager,access_hka_api_log_manager,model_hka_api_log,account.group_account_manager,1,1,1,1
 access_account_tax_isc,access_account_tax_isc,model_account_tax_isc,base.group_user,1,0,0,0
 access_account_tax_isc_manager,access_account_tax_isc_manager,model_account_tax_isc,account.group_account_manager,1,1,1,1
-access_dgi_anulacion_wizard,access_dgi_anulacion_wizard,model_dgi_anulacion_wizard,account.group_account_user,1,1,1,1
+access_dgi_anulacion_wizard,access_dgi_anulacion_wizard,model_dgi_anulacion_wizard,account.group_account_manager,1,1,1,1
 

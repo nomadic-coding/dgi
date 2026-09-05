@@ -34,30 +34,30 @@
     </datosTransaccion>
     <listaItems>
       <item>
-        <descripcion>Consulting service</descripcion>
         <cantidad>1.00</cantidad>
-        <precioUnitario>1000.00</precioUnitario>
-        <precioItem>1000.00</precioItem>
-        <valorTotal>1070.00</valorTotal>
-        <codigo>SVC-001</codigo>
         <unidadMedida>und</unidadMedida>
+        <codigo>SVC-001</codigo>
+        <descripcion>[SVC-001] Consulting service&#8232;Consulting service</descripcion>
+        <precioUnitario>800.00</precioUnitario>
+        <precioItem>800.00</precioItem>
         <tasaITBMS>01</tasaITBMS>
-        <valorITBMS>70.00</valorITBMS>
+        <valorITBMS>56.00</valorITBMS>
+        <valorTotal>856.00</valorTotal>
       </item>
     </listaItems>
     <totalesSubTotales>
-      <totalPrecioNeto>1000.00</totalPrecioNeto>
-      <totalITBMS>70.00</totalITBMS>
-      <totalMontoGravado>70.00</totalMontoGravado>
-      <totalFactura>1070.00</totalFactura>
-      <totalValorRecibido>1070.00</totalValorRecibido>
-      <totalTodosItems>1070.00</totalTodosItems>
+      <totalPrecioNeto>800.00</totalPrecioNeto>
+      <totalITBMS>56.00</totalITBMS>
+      <totalMontoGravado>56.00</totalMontoGravado>
+      <totalFactura>856.00</totalFactura>
+      <totalValorRecibido>856.00</totalValorRecibido>
+      <totalTodosItems>856.00</totalTodosItems>
       <tiempoPago>1</tiempoPago>
       <nroItems>1</nroItems>
       <listaFormaPago>
         <formaPago>
           <formaPagoFact>08</formaPagoFact>
-          <valorCuotaPagada>1070.00</valorCuotaPagada>
+          <valorCuotaPagada>856.00</valorCuotaPagada>
         </formaPago>
       </listaFormaPago>
     </totalesSubTotales>

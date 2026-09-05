@@ -110,6 +110,10 @@ class HkaApiLog(models.Model):
         "authtoken",
         "jwt",
         "authorization",
+        "usuario",
+        "archivo",
+        "file_content",
+        "auth_token",
         "hka_clave",
         "hka_usuario",
         "hka_auth_token",
@@ -189,7 +193,9 @@ class HkaApiLog(models.Model):
             )
 
         if error_message:
-            values["error_message"] = str(error_message)
+            values["error_message"] = str(
+                self._redact_payload({"error": str(error_message)}).get("error")
+            )
 
         # Use a new cursor to ensure the log is committed
         # even if the main transaction is rolled back
