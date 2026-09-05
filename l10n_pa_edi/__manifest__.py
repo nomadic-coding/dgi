@@ -40,6 +40,7 @@ API Documentation: https://felwiki.thefactoryhka.com.pa/
         "security/hka_api_log_security.xml",
         "security/ir.model.access.csv",
         "data/account_tax_isc.xml",
+        "data/dgi_auto_map.xml",
         "views/res_config_settings_views.xml",
         "views/res_partner_views.xml",
         "views/account_journal_views.xml",

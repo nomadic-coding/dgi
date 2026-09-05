@@ -55,5 +55,65 @@ def _migrate_hka_icp_to_company(env):
         ICP.set_param(key, False)
 
 
+def _auto_map_dgi_catalogs(env):
+    """Link standard Odoo records to DGI catalog rows when still empty."""
+    Mapping = env["dgi.code.mapping"].sudo()
+
+    def _map_record(record, xmlid):
+        if not record or record.dgi_code_id:
+            return
+        mapping = env.ref(xmlid, raise_if_not_found=False)
+        if mapping:
+            record.sudo().dgi_code_id = mapping
+
+    _map_record(
+        env.ref("base.pa", raise_if_not_found=False),
+        "l10n_pa_dgi_code_mapping.dgi_mapping_917",
+    )
+    _map_record(
+        env.ref("base.USD", raise_if_not_found=False),
+        "l10n_pa_dgi_code_mapping.dgi_mapping_728",
+    )
+    _map_record(
+        env.ref("base.PAB", raise_if_not_found=False),
+        "l10n_pa_dgi_code_mapping.dgi_mapping_690",
+    )
+    _map_record(
+        env.ref("uom.product_uom_unit", raise_if_not_found=False),
+        "l10n_pa_dgi_code_mapping.dgi_mapping_504",
+    )
+
+    for currency in env["res.currency"].search(
+        [("dgi_code_id", "=", False), ("name", "in", ("PAB", "USD"))]
+    ):
+        mapping = Mapping.search(
+            [("mapping_type", "=", "currency"), ("code", "=", currency.name)],
+            limit=1,
+        )
+        if mapping:
+            currency.sudo().dgi_code_id = mapping
+
+
+def _auto_map_l10n_pa_taxes(env):
+    """Map the official Panama 7% sale ITBMS to HKA code 01 when empty."""
+    Tax = env["account.tax"].sudo()
+    for company in env["res.company"].search([]):
+        tax = env.ref(f"account.{company.id}_ITAX_19", raise_if_not_found=False)
+        if tax and not tax.hka_tax_code:
+            tax.hka_tax_code = "01"
+            continue
+        unmapped = Tax.search(
+            [
+                ("company_id", "=", company.id),
+                ("type_tax_use", "=", "sale"),
+                ("amount", "=", 7.0),
+                ("hka_tax_code", "=", False),
+            ]
+        )
+        unmapped.write({"hka_tax_code": "01"})
+
+
 def post_init_hook(env):
     _migrate_hka_icp_to_company(env)
+    _auto_map_dgi_catalogs(env)
+    _auto_map_l10n_pa_taxes(env)

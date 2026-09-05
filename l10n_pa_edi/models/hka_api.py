@@ -18,6 +18,17 @@ class HkaApi(models.AbstractModel):
     _description = "HKA API Client"
 
     @api.model
+    def _auto_map_defaults(self):
+        """Idempotent catalog/tax mapping, also run on module update."""
+        from odoo.addons.l10n_pa_edi.hooks import (
+            _auto_map_dgi_catalogs,
+            _auto_map_l10n_pa_taxes,
+        )
+
+        _auto_map_dgi_catalogs(self.env)
+        _auto_map_l10n_pa_taxes(self.env)
+
+    @api.model
     def _company_from_move(self, move_id=None):
         if move_id:
             move = self.env["account.move"].browse(move_id)
