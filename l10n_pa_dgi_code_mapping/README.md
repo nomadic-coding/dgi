@@ -31,6 +31,7 @@ All DGI code fields are only visible in debug mode to prevent accidental modific
 ## Technical
 
 * Module Name: `l10n_pa_dgi_code_mapping`
-* Depends: `account`
+* Author: STARK LABS
+* Depends: `account`, `product`, `uom`
 * Odoo Version: 18.0
 

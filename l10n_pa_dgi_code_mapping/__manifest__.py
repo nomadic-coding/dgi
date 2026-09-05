@@ -18,8 +18,8 @@ Features:
 
 This module can be used independently or with l10n_pa_edi for electronic invoicing.
     """,
-    "author": "Your Company",
-    "website": "https://www.yourcompany.com",
+    "author": "STARK LABS",
+    "website": "https://www.starklabspanama.com",
     "depends": [
         "account",
         "product",

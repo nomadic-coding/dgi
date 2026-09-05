@@ -49,5 +49,5 @@ On partner form, Panama address fields appear when Country = Panama.
 ## Compatibility
 - Standalone module (no OCA dependencies)
 - Works with vanilla Odoo 18.0
-- Compatible with DGI modules (`st_dgi_base`, `st_dgi_hka`)
+- Compatible with DGI modules (`l10n_pa_edi`, `l10n_pa_dgi_code_mapping`)
 

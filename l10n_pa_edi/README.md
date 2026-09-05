@@ -15,8 +15,11 @@ Simple, all-in-one module for Panama electronic invoicing with The Factory HKA A
 1. Install dependencies:
    - `l10n_pa` (Panama localization)
    - `l10n_pa_location` (Panama locations)
+   - `l10n_pa_dgi_code_mapping` (DGI catalogs)
 
 2. Install this module: `l10n_pa_edi`
+
+HKA credentials are stored per company under **Settings > Panama Electronic Invoicing**.
 
 ## Configuration
 

@@ -40,8 +40,8 @@
         This module is inspired by OCA's base_location but adapted specifically
         for Panama's administrative structure and DGI requirements.
     """,
-    "author": "Your Company",
-    "website": "https://www.yourcompany.com",
+    "author": "STARK LABS",
+    "website": "https://www.starklabspanama.com",
     "depends": [
         "base",
         "contacts",
