@@ -32,8 +32,8 @@
                                     invisible="not dgi_ruc" help="Validate RUC with DGI Panama" />
                         </group>
                         <group>
-                            <field name="dgi_ruc_validated" widget="boolean" />
-                            <field name="dgi_ruc_validation_date" invisible="not dgi_ruc_validated" />
+                            <field name="dgi_ruc_validated" widget="boolean" readonly="1" />
+                            <field name="dgi_ruc_validation_date" readonly="1" invisible="not dgi_ruc_validated" />
                             <field name="vat" string="VAT/Tax ID" readonly="1" invisible="not dgi_ruc_validated" />
                         </group>
                     </group>

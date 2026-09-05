@@ -59,11 +59,15 @@ class ResPartner(models.Model):
     dgi_ruc_validated = fields.Boolean(
         string="RUC Validated",
         default=False,
-        help="Indicates if RUC has been validated with DGI",
+        readonly=True,
+        copy=False,
+        help="Set only after a successful DGI RUC validation. Cannot be checked by hand.",
     )
     dgi_ruc_validation_date = fields.Datetime(
         string="Validation Date",
-        help="Date when RUC was validated",
+        readonly=True,
+        copy=False,
+        help="Date when RUC was validated with DGI",
     )
     dgi_tipo_identificacion_extranjero = fields.Selection(
         [
@@ -83,6 +87,23 @@ class ResPartner(models.Model):
         related="country_id.code",
         store=True,
     )
+
+    def _prepare_ruc_validation_vals(self, vals):
+        """Drop validation flags unless they come from action_validate_ruc."""
+        if self.env.context.get("dgi_ruc_validation"):
+            return vals
+        vals = dict(vals)
+        vals.pop("dgi_ruc_validated", None)
+        vals.pop("dgi_ruc_validation_date", None)
+        return vals
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        vals_list = [self._prepare_ruc_validation_vals(vals) for vals in vals_list]
+        return super().create(vals_list)
+
+    def write(self, vals):
+        return super().write(self._prepare_ruc_validation_vals(vals))
 
     @api.depends("dgi_ruc_validated", "dgi_tipo_ruc", "country_id", "country_id.code")
     def _compute_tipo_cliente_fe(self):
@@ -212,7 +233,7 @@ class ResPartner(models.Model):
                 if result.get("status"):
                     vals["dgi_taxpayer_status"] = result.get("status")
 
-                self.write(vals)
+                self.with_context(dgi_ruc_validation=True).write(vals)
 
                 return {
                     "type": "ir.actions.client",

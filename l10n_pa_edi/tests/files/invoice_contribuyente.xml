@@ -1,0 +1,70 @@
+<enviar>
+  <documento>
+    <codigoSucursalEmisor>0000</codigoSucursalEmisor>
+    <datosTransaccion>
+      <tipoEmision>01</tipoEmision>
+      <tipoDocumento>01</tipoDocumento>
+      <numeroDocumentoFiscal>___ignore___</numeroDocumentoFiscal>
+      <puntoFacturacionFiscal>001</puntoFacturacionFiscal>
+      <fechaEmision>2026-03-15T00:00:00-05:00</fechaEmision>
+      <naturalezaOperacion>01</naturalezaOperacion>
+      <tipoOperacion>1</tipoOperacion>
+      <destinoOperacion>1</destinoOperacion>
+      <formatoCAFE>1</formatoCAFE>
+      <entregaCAFE>1</entregaCAFE>
+      <envioContenedor>1</envioContenedor>
+      <procesoGeneracion>1</procesoGeneracion>
+      <tipoSucursal>2</tipoSucursal>
+      <cliente>
+        <tipoClienteFE>01</tipoClienteFE>
+        <telefono1>263-1234</telefono1>
+        <correoElectronico1>acme@example.com</correoElectronico1>
+        <correoElectronico2/>
+        <correoElectronico3/>
+        <pais>PA</pais>
+        <tipoContribuyente>2</tipoContribuyente>
+        <numeroRUC>155701888-2-2019</numeroRUC>
+        <digitoVerificadorRUC>15</digitoVerificadorRUC>
+        <razonSocial>ACME PANAMA S.A.</razonSocial>
+        <direccion>Calle 50 Edificio Test</direccion>
+        <codigoUbicacion>8-8-1</codigoUbicacion>
+        <provincia>PANAMA</provincia>
+        <distrito>PANAMA</distrito>
+        <corregimiento>SAN FELIPE</corregimiento>
+        <tipoIdentificacion/>
+        <nroIdentificacionExtranjero/>
+        <paisExtranjero/>
+      </cliente>
+      <informacionInteres/>
+    </datosTransaccion>
+    <listaItems>
+      <item>
+        <descripcion>Consulting service</descripcion>
+        <cantidad>1.00</cantidad>
+        <precioUnitario>1000.00</precioUnitario>
+        <precioItem>1000.00</precioItem>
+        <valorTotal>1070.00</valorTotal>
+        <codigo>SVC-001</codigo>
+        <unidadMedida>und</unidadMedida>
+        <tasaITBMS>01</tasaITBMS>
+        <valorITBMS>70.00</valorITBMS>
+      </item>
+    </listaItems>
+    <totalesSubTotales>
+      <totalPrecioNeto>1000.00</totalPrecioNeto>
+      <totalITBMS>70.00</totalITBMS>
+      <totalMontoGravado>70.00</totalMontoGravado>
+      <totalFactura>1070.00</totalFactura>
+      <totalValorRecibido>1070.00</totalValorRecibido>
+      <totalTodosItems>1070.00</totalTodosItems>
+      <tiempoPago>1</tiempoPago>
+      <nroItems>1</nroItems>
+      <listaFormaPago>
+        <formaPago>
+          <formaPagoFact>08</formaPagoFact>
+          <valorCuotaPagada>1070.00</valorCuotaPagada>
+        </formaPago>
+      </listaFormaPago>
+    </totalesSubTotales>
+  </documento>
+</enviar>
