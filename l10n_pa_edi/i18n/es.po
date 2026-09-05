@@ -1,0 +1,135 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* l10n_pa_edi
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 18.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-09-05 20:00+0000\n"
+"PO-Revision-Date: 2026-09-05 20:00+0000\n"
+"Last-Translator: STARK LABS\n"
+"Language-Team: Spanish\n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#. module: l10n_pa_edi
+#: model:ir.actions.act_window,name:l10n_pa_edi.action_hka_api_log
+#: model:ir.ui.menu,name:l10n_pa_edi.menu_hka_api_log
+msgid "HKA API Logs"
+msgstr "Registros API HKA"
+
+#. module: l10n_pa_edi
+#: model_terms:ir.ui.view,arch_db:l10n_pa_edi.view_move_form_dgi
+msgid "Send to DGI"
+msgstr "Enviar a DGI"
+
+#. module: l10n_pa_edi
+#: model_terms:ir.ui.view,arch_db:l10n_pa_edi.view_partner_form_dgi
+msgid "Validate RUC"
+msgstr "Validar RUC"
+
+#. module: l10n_pa_edi
+#: model_terms:ir.ui.view,arch_db:l10n_pa_edi.view_dgi_anulacion_wizard_form
+msgid "Cancel Invoice in DGI"
+msgstr "Anular factura en DGI"
+
+#. module: l10n_pa_edi
+#: model:ir.model.fields,field_description:l10n_pa_edi.field_res_partner__dgi_ruc_validated
+msgid "RUC Validated"
+msgstr "RUC validado"
+
+#. module: l10n_pa_edi
+#: model:ir.model.fields,field_description:l10n_pa_edi.field_account_move__dgi_sent
+msgid "Sent to DGI"
+msgstr "Enviado a DGI"
+
+#. module: l10n_pa_edi
+#: model:ir.model.fields,field_description:l10n_pa_edi.field_account_move__dgi_cufe
+msgid "CUFE"
+msgstr "CUFE"
+
+#. module: l10n_pa_edi
+#: model:ir.model.fields,field_description:l10n_pa_edi.field_account_journal__use_dgi_electronic_invoicing
+msgid "Use DGI Electronic Invoicing"
+msgstr "Usar facturación electrónica DGI"
+
+#. module: l10n_pa_edi
+#: model:ir.model.fields,field_description:l10n_pa_edi.field_account_journal__dgi_auto_send_on_post
+msgid "Auto-Send to DGI on Confirm"
+msgstr "Enviar automáticamente a DGI al confirmar"
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/res_partner.py:0
+msgid "Please enter a RUC number first"
+msgstr "Primero ingrese un número de RUC"
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/res_partner.py:0
+msgid "Please select a valid Tipo RUC (01=Natural Person, 02=Juridical Person)"
+msgstr "Seleccione un tipo de RUC válido (01=Persona natural, 02=Persona jurídica)"
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "This document has already been sent to DGI"
+msgstr "Este documento ya fue enviado a DGI"
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "Only posted invoices can be sent to DGI"
+msgstr "Solo las facturas publicadas se pueden enviar a DGI"
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "DGI Electronic Invoicing is not enabled for this journal"
+msgstr "La facturación electrónica DGI no está habilitada en este diario"
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/wizard/dgi_anulacion_wizard.py:0
+msgid "This invoice has not been sent to DGI yet."
+msgstr "Esta factura aún no ha sido enviada a DGI."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/wizard/dgi_anulacion_wizard.py:0
+msgid "Please provide a cancellation reason."
+msgstr "Indique el motivo de anulación."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/wizard/dgi_anulacion_wizard.py:0
+msgid "Cancellation reason must be at least 20 characters long. Current length: %d characters."
+msgstr "El motivo de anulación debe tener al menos 20 caracteres. Longitud actual: %d caracteres."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/wizard/dgi_anulacion_wizard.py:0
+msgid "Cancellation reason must not exceed 500 characters. Current length: %d characters."
+msgstr "El motivo de anulación no debe superar 500 caracteres. Longitud actual: %d caracteres."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/wizard/dgi_anulacion_wizard.py:0
+msgid "Failed to cancel the invoice in DGI: %s. The invoice was not canceled in Odoo."
+msgstr "No se pudo anular la factura en DGI: %s. La factura no se canceló en Odoo."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_tax.py:0
+msgid "If HKA Tax Code is '04' (ISC), you must also set the HKA ISC rate."
+msgstr "Si el código de impuesto HKA es '04' (ISC), también debe configurar la tasa ISC HKA."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "Product DGI/CPBS code is required when the receiver is a government entity (%s)."
+msgstr "El código DGI/CPBS del producto es obligatorio cuando el receptor es una entidad de gobierno (%s)."
