@@ -30,6 +30,7 @@ API Documentation: https://felwiki.thefactoryhka.com.pa/
     ],
     "assets": {
         "web.assets_backend": [
+            "l10n_pa_edi/static/src/js/hka_filtered_selection.js",
             "l10n_pa_edi/static/src/scss/hka_api_log_backend.scss",
         ],
         "web.assets_web_dark": [

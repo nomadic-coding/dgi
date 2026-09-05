@@ -10,6 +10,7 @@
             <xpath expr="//notebook" position="inside">
                 <page string="DGI Panama" name="dgi_panama">
                     <field name="dgi_country_code" invisible="1" />
+                    <field name="dgi_allowed_tipo_ruc" invisible="1" />
 
                     <group string="Electronic Invoice Classification">
                         <group>
@@ -25,7 +26,8 @@
                     <!-- For Panama Taxpayers (01, 03) -->
                     <group string="RUC Information" invisible="dgi_tipo_cliente_fe not in ['01', '02', '03']">
                         <group>
-                            <field name="dgi_tipo_ruc" />
+                            <field name="dgi_tipo_ruc" widget="hka_filtered_selection"
+                                   options="{'allowed_field': 'dgi_allowed_tipo_ruc'}" />
                             <field name="dgi_ruc" placeholder="Enter RUC number" />
                             <field name="dgi_dv" placeholder="DV" />
                             <button name="action_validate_ruc" string="Validate RUC" type="object" class="btn-primary"

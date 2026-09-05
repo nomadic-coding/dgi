@@ -60,21 +60,44 @@
 
                     <group string="Document Settings">
                         <group>
+                            <field name="hka_allowed_document_types" invisible="1" />
+                            <field name="hka_allowed_naturalezas" invisible="1" />
+                            <field name="hka_allowed_destinos" invisible="1" />
+                            <field name="hka_allowed_operation_types" invisible="1" />
+                            <field name="hka_allowed_entrega_cafe" invisible="1" />
+                            <field name="hka_is_sale_document" invisible="1" />
+                            <field name="hka_requires_contingency" invisible="1" />
                             <field name="hka_tipo_emision" />
-                            <field name="hka_tipo_documento" />
+                            <field name="hka_fecha_inicio_contingencia"
+                                   invisible="not hka_requires_contingency"
+                                   required="hka_requires_contingency" />
+                            <field name="hka_motivo_contingencia"
+                                   invisible="not hka_requires_contingency"
+                                   required="hka_requires_contingency"
+                                   placeholder="At least 15 characters" />
+                            <field name="hka_tipo_documento" widget="hka_filtered_selection"
+                                   options="{'allowed_field': 'hka_allowed_document_types'}" />
                             <field name="hka_tipo_documento_manual"
                                    help="If checked, the document type will not be auto-computed based on invoice type. Uncheck to enable auto-computation." />
-                            <field name="hka_naturaleza_operacion" />
-                            <field name="hka_tipo_operacion" />
-                            <field name="hka_destino_operacion" />
+                            <field name="hka_naturaleza_operacion" widget="hka_filtered_selection"
+                                   options="{'allowed_field': 'hka_allowed_naturalezas'}" />
+                            <field name="hka_tipo_operacion" widget="hka_filtered_selection"
+                                   options="{'allowed_field': 'hka_allowed_operation_types'}" />
+                            <field name="hka_destino_operacion" widget="hka_filtered_selection"
+                                   options="{'allowed_field': 'hka_allowed_destinos'}" />
                             <field name="hka_forma_pago" />
-                            <field name="hka_tipo_venta" />
+                            <field name="hka_desc_forma_pago"
+                                   invisible="hka_forma_pago != '99'"
+                                   required="hka_forma_pago == '99'" />
+                            <field name="hka_tipo_venta" invisible="not hka_is_sale_document"
+                                   required="hka_is_sale_document" />
                             <field name="hka_merge_same_dgi_code" />
                         </group>
                         <group>
                             <field name="hka_tipo_sucursal" />
                             <field name="hka_formato_cafe" />
-                            <field name="hka_entrega_cafe" />
+                            <field name="hka_entrega_cafe" widget="hka_filtered_selection"
+                                   options="{'allowed_field': 'hka_allowed_entrega_cafe'}" />
                             <field name="hka_envio_contenedor" />
                             <field name="hka_proceso_generacion" />
                         </group>

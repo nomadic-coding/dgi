@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from odoo import _, api, fields, models
-from odoo.exceptions import UserError
+from odoo.exceptions import UserError, ValidationError
 
 
 class ResPartner(models.Model):
@@ -87,6 +87,38 @@ class ResPartner(models.Model):
         related="country_id.code",
         store=True,
     )
+    dgi_allowed_tipo_ruc = fields.Char(compute="_compute_dgi_allowed_tipo_ruc")
+
+    @api.depends("country_id", "country_id.code")
+    def _compute_dgi_allowed_tipo_ruc(self):
+        for partner in self:
+            if partner.country_id and partner.country_id.code != "PA":
+                partner.dgi_allowed_tipo_ruc = "04"
+            else:
+                partner.dgi_allowed_tipo_ruc = "01,02,03"
+
+    @api.onchange("country_id")
+    def _onchange_country_dgi_tipo_ruc(self):
+        allowed = (self.dgi_allowed_tipo_ruc or "").split(",")
+        if self.dgi_tipo_ruc and self.dgi_tipo_ruc not in allowed:
+            self.dgi_tipo_ruc = allowed[0] if allowed else False
+
+    @api.constrains("dgi_tipo_ruc", "country_id")
+    def _check_dgi_tipo_ruc_country(self):
+        for partner in self:
+            if not partner.dgi_tipo_ruc:
+                continue
+            if partner.country_id and partner.country_id.code != "PA":
+                if partner.dgi_tipo_ruc != "04":
+                    raise ValidationError(
+                        _(
+                            "Foreign partners can only use Tipo RUC 04 (Foreign Entity)."
+                        )
+                    )
+            elif partner.dgi_tipo_ruc == "04":
+                raise ValidationError(
+                    _("Tipo RUC 04 (Foreign Entity) cannot be used for a Panama partner.")
+                )
 
     def _prepare_ruc_validation_vals(self, vals):
         """Always drop validation flags from client/ORM writes."""

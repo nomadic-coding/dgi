@@ -168,3 +168,95 @@ msgstr "Líneas de e-factura"
 #: model_terms:ir.ui.view,arch_db:l10n_pa_edi.res_config_settings_view_form
 msgid "Default for new invoices: send one e-factura line per DGI product/service code (same ITBMS/ISC). Can be overridden on each invoice."
 msgstr "Valor predeterminado para facturas nuevas: enviar una línea de e-factura por código DGI de producto/servicio (mismo ITBMS/ISC). Se puede cambiar en cada factura."
+
+#. module: l10n_pa_edi
+#: model:ir.model.fields,field_description:l10n_pa_edi.field_account_move__hka_desc_forma_pago
+msgid "Payment Method Description"
+msgstr "Descripción de la forma de pago"
+
+#. module: l10n_pa_edi
+#: model:ir.model.fields,field_description:l10n_pa_edi.field_account_move__hka_fecha_inicio_contingencia
+msgid "Contingency Start"
+msgstr "Inicio de contingencia"
+
+#. module: l10n_pa_edi
+#: model:ir.model.fields,field_description:l10n_pa_edi.field_account_move__hka_motivo_contingencia
+msgid "Contingency Reason"
+msgstr "Motivo de contingencia"
+
+#. module: l10n_pa_edi
+#: model_terms:ir.ui.view,arch_db:l10n_pa_edi.view_move_form_dgi
+msgid "At least 15 characters"
+msgstr "Al menos 15 caracteres"
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "Document Type %(doc)s is not valid for this invoice and receiver."
+msgstr "El tipo de documento %(doc)s no es válido para esta factura y este receptor."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "Nature of Operation %(nature)s is not valid for Document Type %(doc)s."
+msgstr "La naturaleza de la operación %(nature)s no es válida para el tipo de documento %(doc)s."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "Destination %(dest)s is not valid for Document Type %(doc)s."
+msgstr "El destino %(dest)s no es válido para el tipo de documento %(doc)s."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "Operation Type %(op)s is not valid for Document Type %(doc)s."
+msgstr "El tipo de operación %(op)s no es válido para el tipo de documento %(doc)s."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "Sale Type is required for sales documents."
+msgstr "El tipo de venta es obligatorio en documentos de venta."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "Sale Type must be empty when the document is not a sale."
+msgstr "El tipo de venta debe quedar vacío cuando el documento no es una venta."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "CAFE Delivery %(delivery)s is not valid for CAFE Format %(fmt)s."
+msgstr "La entrega de CAFE %(delivery)s no es válida para el formato CAFE %(fmt)s."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "Contingency Start is required when Emission Type is 02 or 04."
+msgstr "El inicio de contingencia es obligatorio cuando el tipo de emisión es 02 o 04."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "Contingency Reason must be at least %(min)s characters when Emission Type is 02 or 04."
+msgstr "El motivo de contingencia debe tener al menos %(min)s caracteres cuando el tipo de emisión es 02 o 04."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "Payment Method Description is required when Payment Method is 99."
+msgstr "La descripción de la forma de pago es obligatoria cuando la forma de pago es 99."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/res_partner.py:0
+msgid "Foreign partners can only use Tipo RUC 04 (Foreign Entity)."
+msgstr "Los contactos extranjeros solo pueden usar el tipo de RUC 04 (Entidad extranjera)."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/res_partner.py:0
+msgid "Tipo RUC 04 (Foreign Entity) cannot be used for a Panama partner."
+msgstr "El tipo de RUC 04 (Entidad extranjera) no se puede usar en un contacto de Panamá."

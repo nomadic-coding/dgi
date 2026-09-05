@@ -7,7 +7,7 @@
       <numeroDocumentoFiscal>___ignore___</numeroDocumentoFiscal>
       <puntoFacturacionFiscal>001</puntoFacturacionFiscal>
       <fechaEmision>2026-03-20T00:00:00-05:00</fechaEmision>
-      <naturalezaOperacion>01</naturalezaOperacion>
+      <naturalezaOperacion>11</naturalezaOperacion>
       <tipoOperacion>1</tipoOperacion>
       <destinoOperacion>1</destinoOperacion>
       <formatoCAFE>1</formatoCAFE>
