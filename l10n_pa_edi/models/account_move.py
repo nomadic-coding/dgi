@@ -5,6 +5,7 @@ from collections import defaultdict
 
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
+from odoo.modules.registry import Registry
 from odoo.tools.float_utils import float_compare
 from odoo.tools.mail import html2plaintext
 
@@ -859,35 +860,51 @@ class AccountMove(models.Model):
 
         return True
 
-    def _post(self, soft=True):
-        """Override to automatically send invoices to DGI when posted (if enabled)"""
-        res = super()._post(soft=soft)
-
-        # Automatically send to DGI after posting for eligible invoices
-        for move in self:
-            # Only send if auto-send is enabled on the journal
-            if (
+    def _dgi_moves_to_auto_send(self):
+        """Posted customer invoices/refunds whose journal sends to DGI on confirm."""
+        return self.filtered(
+            lambda move: (
                 move.state == "posted"
                 and move.move_type in ("out_invoice", "out_refund")
                 and move.journal_id.use_dgi_electronic_invoicing
                 and move.journal_id.dgi_auto_send_on_post
                 and not move.dgi_sent
-            ):
-                try:
-                    move._send_to_dgi_auto()
-                except Exception as e:
-                    # Log error but don't block posting
-                    _logger.error(
-                        "Failed to automatically send invoice %s to DGI: %s",
-                        move.name,
-                        str(e),
-                        exc_info=True,
-                    )
-                    move.message_post(
-                        body=_("Failed to automatically send to DGI: %s") % str(e),
-                        message_type="notification",
-                    )
+            )
+        )
 
+    def _register_dgi_auto_send(self):
+        """Call HKA only after the posting transaction commits.
+
+        Enviar is irreversible. Sending inside ``_post`` meant a later rollback
+        could drop the Odoo invoice while DGI already had a fiscal document.
+        """
+        move_ids = self.ids
+        dbname = self.env.cr.dbname
+        uid = self.env.uid
+        context = dict(self.env.context)
+
+        @self.env.cr.postcommit.add
+        def _send_to_dgi_after_commit():
+            db_registry = Registry(dbname)
+            with db_registry.cursor() as cr:
+                env = api.Environment(cr, uid, context)
+                for move in env["account.move"].browse(move_ids).exists():
+                    try:
+                        move._send_to_dgi_auto()
+                        cr.commit()
+                    except Exception:
+                        cr.rollback()
+                        _logger.exception(
+                            "Failed to automatically send invoice %s to DGI after commit",
+                            move.name,
+                        )
+
+    def _post(self, soft=True):
+        """Queue DGI auto-send after the posting transaction commits."""
+        res = super()._post(soft=soft)
+        moves_to_send = self._dgi_moves_to_auto_send()
+        if moves_to_send:
+            moves_to_send._register_dgi_auto_send()
         return res
 
     def _send_to_dgi_auto(self):
