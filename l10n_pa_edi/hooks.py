@@ -113,7 +113,98 @@ def _auto_map_l10n_pa_taxes(env):
         unmapped.write({"hka_tax_code": "01"})
 
 
+HKA_UPGRADE_QUEUE_ERROR = (
+    "Queued during the Panama DGI electronic invoicing upgrade. "
+    "Click Retry to send this invoice to DGI."
+)
+
+
+def _drop_legacy_dgi_auto_send_column(cr):
+    """Remove the retired journal flag after the field is gone from the model."""
+    cr.execute(
+        "ALTER TABLE account_journal DROP COLUMN IF EXISTS dgi_auto_send_on_post"
+    )
+
+
+def _enable_hka_edi_on_dgi_journals(env):
+    """Attach the HKA EDI format to journals that already use DGI."""
+    edi_format = env.ref("l10n_pa_edi.edi_format_pa_dgi_hka", raise_if_not_found=False)
+    if not edi_format:
+        return
+    journals = env["account.journal"].search([
+        ("use_dgi_electronic_invoicing", "=", True),
+    ])
+    if journals:
+        journals.edi_format_ids |= edi_format
+
+
+def _hka_edi_moves_missing_documents(env, edi_format, moves):
+    if not moves:
+        return env["account.move"]
+    existing_move_ids = set(
+        env["account.edi.document"].search([
+            ("edi_format_id", "=", edi_format.id),
+            ("move_id", "in", moves.ids),
+        ]).mapped("move_id").ids
+    )
+    return moves.filtered(lambda move: move.id not in existing_move_ids)
+
+
+def _backfill_hka_edi_documents(env):
+    """Create EDI documents for invoices that existed before account.edi.
+
+    Sent / anulado invoices get ``sent`` / ``cancelled``. Posted invoices that
+    were never sent are queued as ``to_send`` with a blocking error so the EDI
+    cron does not call Enviar during the upgrade. Users click Retry to send.
+    """
+    edi_format = env.ref("l10n_pa_edi.edi_format_pa_dgi_hka", raise_if_not_found=False)
+    if not edi_format:
+        return
+
+    sent_moves = _hka_edi_moves_missing_documents(
+        env,
+        edi_format,
+        env["account.move"].search([
+            ("dgi_cufe", "!=", False),
+            ("move_type", "in", ("out_invoice", "out_refund")),
+        ]),
+    )
+    to_create = [
+        {
+            "move_id": move.id,
+            "edi_format_id": edi_format.id,
+            "state": "cancelled" if move.dgi_status == "anulado" else "sent",
+        }
+        for move in sent_moves
+    ]
+
+    unsent_moves = _hka_edi_moves_missing_documents(
+        env,
+        edi_format,
+        env["account.move"].search([
+            ("state", "=", "posted"),
+            ("move_type", "in", ("out_invoice", "out_refund")),
+            ("journal_id.use_dgi_electronic_invoicing", "=", True),
+            ("dgi_cufe", "=", False),
+        ]),
+    )
+    to_create.extend(
+        {
+            "move_id": move.id,
+            "edi_format_id": edi_format.id,
+            "state": "to_send",
+            "error": HKA_UPGRADE_QUEUE_ERROR,
+            "blocking_level": "error",
+        }
+        for move in unsent_moves
+    )
+    if to_create:
+        env["account.edi.document"].create(to_create)
+
+
 def post_init_hook(env):
     _migrate_hka_icp_to_company(env)
     _auto_map_dgi_catalogs(env)
     _auto_map_l10n_pa_taxes(env)
+    _enable_hka_edi_on_dgi_journals(env)
+    _backfill_hka_edi_documents(env)

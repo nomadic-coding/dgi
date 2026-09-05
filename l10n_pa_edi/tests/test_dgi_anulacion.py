@@ -90,3 +90,10 @@ class TestL10nPaEdiAnulacion(L10nPaEdiTestCommon):
             invoice.with_context(force_dgi_cancel=True).button_cancel()
         self.assertEqual(invoice.state, "posted")
         self.assertEqual(invoice.dgi_status, "procesado")
+
+    def test_force_cancel_button_blocked_while_procesado(self):
+        invoice = self._sent_invoice()
+        with self.assertRaises(UserError) as error:
+            invoice.button_force_cancel()
+        self.assertIn("processed in DGI", str(error.exception))
+        self.assertEqual(invoice.state, "posted")

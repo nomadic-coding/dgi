@@ -33,6 +33,10 @@ Go to **Settings > General Settings > Panama Electronic Invoicing** and configur
 - **Merge Same DGI Code Lines**: Default for new invoices; group e-factura lines that share the same DGI product/service code. Override on each invoice's Electronic Invoice (DGI) tab.
 - **Sale Type (`tipoVenta`)**: Required on customer invoices (giro, asset, real estate, or service). Not sent on credit notes.
 
+Posted DGI invoices use Odoo's `account.edi` format **Panama DGI (HKA)**. Sending is queued on post and processed by **Process now** or the electronic invoicing cron.
+
+Upgrading from 18.0.1.0.0 attaches that format to existing DGI journals and backfills EDI documents. Invoices that already have a CUFE become `sent` (or `cancelled` if anulado). Posted invoices that were never sent are queued with a blocking error so the cron does not call Enviar; use **Retry** to send them.
+
 ## Usage
 
 ### 1. Configure Journal
@@ -56,7 +60,7 @@ Go to **Accounting > Configuration > Journals** and set:
 1. Create and post an invoice
 2. Go to **Electronic Invoice (DGI)** tab
 3. Review/configure electronic invoice settings
-4. Click **Send to DGI** button
+4. Click **Process now** on the electronic invoicing banner, or wait for the EDI cron
 5. System will send the invoice and display:
    - CUFE (Unique Electronic Invoice Code)
    - QR Code
@@ -83,7 +87,8 @@ Go to **Accounting > Configuration > Journals** and set:
 - `hka_api.validate_ruc(ruc, tipo_ruc)`: Validate RUC with DGI
 - `hka_api.enviar(document_data)`: Send document to DGI
 - `res.partner.action_validate_ruc()`: Validate partner's RUC
-- `account.move.action_send_to_dgi()`: Send invoice to DGI
+- `account.edi.format` `pa_dgi_hka`: post/cancel HKA documents via the standard EDI cron
+- `account.move.action_send_to_dgi()`: Process the queued HKA EDI document now
 - `account.move._prepare_dgi_document_data()`: Prepare document for API
 
 ## Support

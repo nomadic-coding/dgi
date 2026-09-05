@@ -131,7 +131,7 @@ class TestL10nPaEdiLiveHka(L10nPaEdiTestCommon):
 
     def test_live_merged_rounding_invoices_accepted_by_hka(self):
         """Send merged same-code lines whose unit price is not a clean 2-decimal split."""
-        self.dgi_sequence.sudo().write({"number_next": 297})
+        self.dgi_sequence.sudo().write({"number_next": 301})
         invoice_date = "2026-09-05"
 
         uneven = self._create_dgi_invoice(
@@ -143,12 +143,12 @@ class TestL10nPaEdiLiveHka(L10nPaEdiTestCommon):
                 {**self._default_invoice_line_vals(), "name": "Line C", "quantity": 1, "price_unit": 10.01},
             ],
         )
-        self.assertEqual(uneven.name, "0000000297")
+        self.assertEqual(uneven.name, "0000000301")
         payload = uneven._prepare_dgi_document_data()
         self.assertEqual(len(payload["documento"]["listaItems"]), 1)
         self._assert_hka_payload_matches_move(uneven, payload)
         uneven.action_send_to_dgi()
-        self._assert_hka_accepted(uneven, "0000000297")
+        self._assert_hka_accepted(uneven, "0000000301")
 
         pennies = self._create_dgi_invoice(
             partner=self.partner_live_contribuyente,
@@ -163,7 +163,7 @@ class TestL10nPaEdiLiveHka(L10nPaEdiTestCommon):
                 for index in range(7)
             ],
         )
-        self.assertEqual(pennies.name, "0000000298")
+        self.assertEqual(pennies.name, "0000000302")
         self._assert_hka_payload_matches_move(pennies)
         pennies.action_send_to_dgi()
-        self._assert_hka_accepted(pennies, "0000000298")
+        self._assert_hka_accepted(pennies, "0000000302")

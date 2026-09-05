@@ -18,13 +18,6 @@ class AccountJournal(models.Model):
         help="Enable electronic invoicing for Panama DGI",
     )
 
-    dgi_auto_send_on_post = fields.Boolean(
-        string="Auto-Send to DGI on Confirm",
-        default=False,
-        help="Automatically send invoices to DGI when they are confirmed/posted. "
-        "If disabled, invoices must be sent manually using the 'Send to DGI' button.",
-    )
-
     dgi_codigo_sucursal_emisor = fields.Char(
         string="Branch Code",
         size=4,
@@ -64,6 +57,24 @@ class AccountJournal(models.Model):
             self._validate_branch_code(journal)
             self._validate_fiscal_point(journal)
             self._validate_dgi_sequence(journal)
+
+    @api.depends(
+        "type",
+        "company_id",
+        "company_id.account_fiscal_country_id",
+        "use_dgi_electronic_invoicing",
+    )
+    def _compute_compatible_edi_ids(self):
+        return super()._compute_compatible_edi_ids()
+
+    @api.depends(
+        "type",
+        "company_id",
+        "company_id.account_fiscal_country_id",
+        "use_dgi_electronic_invoicing",
+    )
+    def _compute_edi_format_ids(self):
+        return super()._compute_edi_format_ids()
 
     @api.constrains("company_id", "dgi_codigo_sucursal_emisor", "dgi_punto_facturacion_fiscal")
     def _check_sucursal_punto_unique(self):

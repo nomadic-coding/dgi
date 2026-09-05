@@ -90,12 +90,13 @@ class L10nPaEdiTestCommon(AccountTestInvoicingCommon):
             "company_id": cls.company.id,
         })
         cls.sale_journal = cls.company_data["default_journal_sale"]
+        cls.hka_edi_format = cls.env.ref("l10n_pa_edi.edi_format_pa_dgi_hka")
         cls.sale_journal.write({
             "use_dgi_electronic_invoicing": True,
-            "dgi_auto_send_on_post": False,
             "dgi_codigo_sucursal_emisor": "0000",
             "dgi_punto_facturacion_fiscal": "001",
             "dgi_sequence_id": cls.dgi_sequence.id,
+            "edi_format_ids": [Command.set(cls.hka_edi_format.ids)],
         })
 
     @classmethod
@@ -207,12 +208,25 @@ class L10nPaEdiTestCommon(AccountTestInvoicingCommon):
 
     def _mark_dgi_sent(self, move, **vals):
         payload = {
-            "dgi_sent": True,
             "dgi_status": "procesado",
             "dgi_cufe": "TEST-CUFE-001",
         }
         payload.update(vals)
+        payload.pop("dgi_sent", None)
         move._dgi_write_api_fields(payload)
+        existing = move._l10n_pa_hka_edi_documents()
+        if existing:
+            existing.sudo().write({
+                "state": "sent",
+                "error": False,
+                "blocking_level": False,
+            })
+        else:
+            self.env["account.edi.document"].create({
+                "move_id": move.id,
+                "edi_format_id": self.hka_edi_format.id,
+                "state": "sent",
+            })
         return move
 
     @classmethod

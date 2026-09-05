@@ -10,9 +10,6 @@
                     <group>
                         <group string="Electronic Invoicing Configuration">
                             <field name="use_dgi_electronic_invoicing" widget="boolean" />
-                            <field name="dgi_auto_send_on_post" widget="boolean"
-                                   invisible="not use_dgi_electronic_invoicing"
-                                   help="If enabled, invoices will be automatically sent to DGI when confirmed/posted. If disabled, use the 'Send to DGI' button to send manually." />
                             <field name="dgi_codigo_sucursal_emisor" placeholder="0000"
                                    invisible="not use_dgi_electronic_invoicing"
                                    required="use_dgi_electronic_invoicing" />

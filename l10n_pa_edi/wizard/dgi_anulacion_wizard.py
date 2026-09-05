@@ -1,11 +1,8 @@
 # -*- coding: utf-8 -*-
 
-import logging
-
 from odoo import _, api, fields, models
 from odoo.exceptions import AccessError, UserError
-
-_logger = logging.getLogger(__name__)
+from odoo.tools.mail import html2plaintext
 
 
 class DgiAnulacionWizard(models.TransientModel):
@@ -94,7 +91,7 @@ class DgiAnulacionWizard(models.TransientModel):
         return res
 
     def action_anular(self):
-        """Cancel the invoice in DGI first, then cancel it in Odoo."""
+        """Store the motivo, mark the HKA EDI document to cancel, then process it."""
         self.ensure_one()
         if not self.env.user.has_group("account.group_account_manager"):
             raise AccessError(_("Only accounting managers can cancel invoices in DGI."))
@@ -135,28 +132,26 @@ class DgiAnulacionWizard(models.TransientModel):
                 % motivo_length
             )
 
-        anulacion_data = {
-            "motivoAnulacion": motivo_anulacion_clean,
-            "datosDocumento": {
-                "codigoSucursalEmisor": move.journal_id.dgi_codigo_sucursal_emisor or "",
-                "numeroDocumentoFiscal": move.name or "",
-                "puntoFacturacionFiscal": (
-                    move.journal_id.dgi_punto_facturacion_fiscal or "001"
-                ).zfill(3),
-                "serialDispositivo": "",
-                "tipoDocumento": move.hka_tipo_documento or "01",
-                "tipoEmision": move.hka_tipo_emision or "01",
-            },
-        }
+        move.write({"hka_motivo_anulacion": motivo_anulacion_clean})
 
-        hka_api = self.env["l10n_pa_edi.hka_api"]
-        result = hka_api.anular(anulacion_data, move_id=move.id)
+        edi_docs = move._l10n_pa_hka_edi_documents().filtered(
+            lambda doc: doc.state == "sent"
+        )
+        if not edi_docs:
+            raise UserError(_("This invoice has no HKA electronic document to cancel."))
 
-        if not result.get("success"):
-            error_message = (
-                result.get("error_message")
-                or result.get("mensaje")
-                or _("Unknown error")
+        edi_docs.write({"state": "to_cancel", "error": False, "blocking_level": False})
+        move.action_process_edi_web_services(with_commit=False)
+        move.invalidate_recordset([
+            "dgi_status",
+            "dgi_error_message",
+            "edi_state",
+            "edi_error_message",
+            "state",
+        ])
+        if move.dgi_status != "anulado":
+            error_message = html2plaintext(
+                move.edi_error_message or move.dgi_error_message or _("Unknown error")
             )
             raise UserError(
                 _(
@@ -166,25 +161,6 @@ class DgiAnulacionWizard(models.TransientModel):
                 % error_message
             )
 
-        move._dgi_commit_api_fields(
-            {
-                "dgi_status": "anulado",
-                "dgi_error_message": False,
-            }
-        )
-        try:
-            move.button_cancel()
-        except Exception as exc:
-            _logger.exception(
-                "Invoice %s was canceled in DGI but Odoo cancel failed", move.name
-            )
-            raise UserError(
-                _(
-                    "The invoice was canceled in DGI but could not be canceled in Odoo: %s. "
-                    "Do not send this document again; finish the Odoo cancellation manually."
-                )
-                % exc
-            ) from exc
         move.message_post(
             body=_("Invoice successfully canceled in DGI. Reason: %s")
             % self.motivo_anulacion,

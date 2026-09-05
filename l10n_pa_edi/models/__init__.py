@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from . import (
+    account_edi_format,
     account_journal,
     account_move,
     account_tax,

@@ -5,7 +5,6 @@ from collections import defaultdict
 
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError, ValidationError
-from odoo.modules.registry import Registry
 from odoo.tools.float_utils import float_compare
 from odoo.tools.mail import html2plaintext
 
@@ -242,9 +241,19 @@ class AccountMove(models.Model):
         "(and the same ITBMS/ISC) into one line. Defaults from the company setting.",
     )
 
+    hka_motivo_anulacion = fields.Text(
+        string="DGI Cancellation Reason",
+        copy=False,
+        help="Reason sent to HKA Anulación. Written by the cancellation wizard.",
+    )
+
     # DGI Response Fields
     dgi_sent = fields.Boolean(
-        string="Sent to DGI", default=False, readonly=True, copy=False
+        string="Sent to DGI",
+        compute="_compute_dgi_sent",
+        store=True,
+        readonly=True,
+        copy=False,
     )
     dgi_sent_date = fields.Datetime(string="Sent Date", readonly=True, copy=False)
     dgi_status = fields.Char(
@@ -275,6 +284,15 @@ class AccountMove(models.Model):
         "dgi_protocolo_autorizacion",
         "dgi_error_message",
     })
+
+    @api.depends("edi_state", "dgi_cufe", "dgi_status")
+    def _compute_dgi_sent(self):
+        for move in self:
+            move.dgi_sent = (
+                move.edi_state in ("sent", "to_cancel", "cancelled")
+                or bool(move.dgi_cufe)
+                or move.dgi_status in ("procesado", "anulado")
+            )
 
     @api.depends(
         "move_type",
@@ -1257,20 +1275,26 @@ class AccountMove(models.Model):
                     % self.reversed_entry_id.name
                 )
 
-    def _send_to_dgi_internal(self):
-        """Internal method to send invoice to DGI - shared by manual and auto-send"""
+    def _l10n_pa_hka_edi_documents(self):
+        return self.edi_document_ids.filtered(
+            lambda doc: doc.edi_format_id.code == "pa_dgi_hka"
+        )
+
+    def _send_to_dgi_internal(self, document_data=None):
+        """Send the invoice payload to HKA and persist the DGI response fields."""
         self.ensure_one()
 
         self.env.cr.execute(
             "SELECT id FROM account_move WHERE id = %s FOR UPDATE",
             [self.id],
         )
-        self.invalidate_recordset(["dgi_sent", "dgi_status", "dgi_cufe"])
-        if self.dgi_sent:
+        self.invalidate_recordset(["dgi_status", "dgi_cufe"])
+        if self.dgi_cufe and self.dgi_status in ("procesado", "anulado"):
             raise UserError(_("This document has already been sent to DGI"))
 
         hka_api = self.env["l10n_pa_edi.hka_api"]
-        document_data = self._prepare_dgi_document_data()
+        if document_data is None:
+            document_data = self._prepare_dgi_document_data()
         result = hka_api.enviar(document_data, move_id=self.id)
 
         fields_to_write = {
@@ -1283,7 +1307,6 @@ class AccountMove(models.Model):
             "dgi_protocolo_autorizacion": result["dgi_protocolo_autorizacion"],
         }
         if result["success"]:
-            fields_to_write["dgi_sent"] = True
             self._dgi_commit_api_fields(fields_to_write)
         else:
             self._dgi_write_api_fields(fields_to_write)
@@ -1291,144 +1314,18 @@ class AccountMove(models.Model):
         return result
 
     def action_send_to_dgi(self):
-        """Send invoice to DGI via HKA API (manual trigger)"""
+        """Process the HKA EDI document now (manual trigger / tests)."""
         self.ensure_one()
-
-        # Validate before sending
-        self._validate_before_send_to_dgi()
-
-        # Send to DGI
-        result = self._send_to_dgi_internal()
-
-        # Post appropriate message to chatter
-        if result["success"]:
-            message = (
-                _("Document sent to DGI successfully. CUFE: %s") % result["dgi_cufe"]
-            )
-        else:
-            error_message = (
-                result.get("error_message")
-                or result.get("mensaje")
-                or _("Unknown error")
-            )
-            message = _("DGI Error: %s") % error_message
-
-        self.message_post(body=message, message_type="notification")
-
-        return True
-
-    def _dgi_moves_to_auto_send(self):
-        """Posted customer invoices/refunds whose journal sends to DGI on confirm."""
-        return self.filtered(
-            lambda move: (
-                move.state == "posted"
-                and move.move_type in ("out_invoice", "out_refund")
-                and move.journal_id.use_dgi_electronic_invoicing
-                and move.journal_id.dgi_auto_send_on_post
-                and not move.dgi_sent
-            )
-        )
-
-    def _register_dgi_auto_send(self):
-        """Call HKA only after the posting transaction commits.
-
-        Enviar is irreversible. Sending inside ``_post`` meant a later rollback
-        could drop the Odoo invoice while DGI already had a fiscal document.
-        """
-        move_ids = self.ids
-        dbname = self.env.cr.dbname
-        uid = self.env.uid
-        context = dict(self.env.context)
-
-        @self.env.cr.postcommit.add
-        def _send_to_dgi_after_commit():
-            db_registry = Registry(dbname)
-            with db_registry.cursor() as cr:
-                env = api.Environment(cr, uid, context)
-                for move in env["account.move"].browse(move_ids).exists():
-                    try:
-                        move._send_to_dgi_auto()
-                        cr.commit()
-                    except Exception:
-                        cr.rollback()
-                        _logger.exception(
-                            "Failed to automatically send invoice %s to DGI after commit",
-                            move.name,
-                        )
-
-    def _post(self, soft=True):
-        """Queue DGI auto-send after the posting transaction commits."""
-        res = super()._post(soft=soft)
-        moves_to_send = self._dgi_moves_to_auto_send()
-        if moves_to_send:
-            moves_to_send._register_dgi_auto_send()
-        return res
-
-    def _send_to_dgi_auto(self):
-        """Internal method to send invoice to DGI (called automatically on post)"""
-        self.ensure_one()
-
-        # Quick checks before validation
-        if not self.journal_id.use_dgi_electronic_invoicing:
-            return  # Skip if DGI not enabled for this journal
-
-        if self.dgi_sent:
-            return  # Already sent
-
         if self.state != "posted":
-            return  # Not posted yet
-
-        try:
-            # Validate before sending (will raise UserError if validation fails)
-            self._validate_before_send_to_dgi()
-
-            # Send to DGI
-            result = self._send_to_dgi_internal()
-
-            # Post appropriate message to chatter
-            if result["success"]:
-                message = _(
-                    "Document automatically sent to DGI. Status: %s, CUFE: %s"
-                ) % (
-                    result["status"],
-                    result["dgi_cufe"] or _("Pending"),
-                )
-                self.message_post(body=message, message_type="notification")
-            else:
-                error_message = (
-                    result["error_message"]
-                    or result.get("mensaje")
-                    or _("Unknown error")
-                )
-                message = (
-                    _("Failed to automatically send document to DGI: %s")
-                    % error_message
-                )
-                self.message_post(body=message, message_type="notification")
-
-        except UserError as e:
-            # UserError means validation failed - log and inform user but don't block posting
-            _logger.warning(
-                "Validation failed for auto-send to DGI (invoice %s): %s",
-                self.name,
-                str(e),
+            raise UserError(_("Only posted invoices can be sent to DGI"))
+        if self.dgi_sent:
+            raise UserError(_("This document has already been sent to DGI"))
+        if not self._l10n_pa_hka_edi_documents().filtered(lambda doc: doc.state == "to_send"):
+            raise UserError(
+                _("DGI Electronic Invoicing is not enabled for this journal")
             )
-            self.message_post(
-                body=_("Failed to automatically send to DGI: %s") % str(e),
-                message_type="notification",
-            )
-        except Exception as e:
-            # Other errors - log but don't block posting
-            _logger.error(
-                "Unexpected error during auto-send to DGI (invoice %s): %s",
-                self.name,
-                str(e),
-                exc_info=True,
-            )
-            self.message_post(
-                body=_("Failed to automatically send to DGI: %s") % str(e),
-                message_type="notification",
-            )
+        self.action_process_edi_web_services(with_commit=False)
+        return True
 
     def _is_dgi_anulado(self):
         """Check if invoice is canceled in DGI"""
@@ -1507,16 +1404,44 @@ class AccountMove(models.Model):
             "context": {"active_id": self.id},
         }
 
-    def button_draft(self):
-        """Override to prevent resetting to draft if canceled in DGI"""
+    def button_cancel_posted_moves(self):
+        """Collect the HKA motivo before requesting EDI cancellation."""
+        dgi_moves = self.filtered(
+            lambda move: move.dgi_sent and move.dgi_status == "procesado"
+        )
+        if dgi_moves:
+            if len(self) > 1:
+                raise UserError(
+                    _("Cancel DGI invoices one at a time so each can have its own reason.")
+                )
+            return self.action_cancel_dgi()
+        return super().button_cancel_posted_moves()
+
+    def button_force_cancel(self):
         for move in self:
-            if move._is_dgi_anulado():
+            if move.dgi_sent and move.dgi_status == "procesado":
                 raise UserError(
                     _(
-                        "Cannot reset to draft: Invoice %s has been canceled in DGI and cannot be modified."
+                        "Cannot cancel: Invoice %s is processed in DGI. "
+                        "Use Cancel Invoice in DGI first."
                     )
                     % move.display_name
                 )
+        return super().button_force_cancel()
+
+    def button_draft(self):
+        """Block reset to draft after DGI anulación, except the EDI cancel postprocess."""
+        for move in self:
+            if not move._is_dgi_anulado():
+                continue
+            if move.state == "posted" and move.edi_state == "cancelled":
+                continue
+            raise UserError(
+                _(
+                    "Cannot reset to draft: Invoice %s has been canceled in DGI and cannot be modified."
+                )
+                % move.display_name
+            )
         return super().button_draft()
 
     def button_cancel(self):

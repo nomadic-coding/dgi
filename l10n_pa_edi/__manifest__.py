@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     "name": "Panama - Electronic Invoicing",
-    "version": "18.0.1.0.0",
+    "version": "18.0.1.1.0",
     "category": "Accounting/Localizations/EDI",
     "summary": "Panama Electronic Invoicing with HKA API",
     "description": """
@@ -23,6 +23,7 @@ API Documentation: https://felwiki.thefactoryhka.com.pa/
     "website": "https://www.starklabspanama.com",
     "depends": [
         "account",
+        "account_edi",
         "sale",
         "l10n_pa",
         "l10n_pa_location",
@@ -40,6 +41,7 @@ API Documentation: https://felwiki.thefactoryhka.com.pa/
     "data": [
         "security/hka_api_log_security.xml",
         "security/ir.model.access.csv",
+        "data/account_edi_format.xml",
         "data/account_tax_isc.xml",
         "data/dgi_auto_map.xml",
         "views/res_config_settings_views.xml",

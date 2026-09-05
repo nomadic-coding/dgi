@@ -10,12 +10,7 @@
                 <attribute name="readonly">dgi_status == 'anulado'</attribute>
             </xpath>
 
-            <!-- Add Send to DGI button in header (only show if auto-send is disabled) -->
             <xpath expr="//form/header" position="inside">
-                <button name="action_send_to_dgi" string="Send to DGI" type="object" class="btn-primary"
-                        invisible="state != 'posted' or dgi_sent or move_type not in ('out_invoice', 'out_refund') or journal_id.dgi_auto_send_on_post"
-                        help="Send electronic invoice to DGI Panama manually" />
-
                 <button name="action_download_efactura" string="Download E-Factura (PDF)" type="object"
                         class="btn-secondary" invisible="dgi_status != 'procesado'"
                         help="Download the electronic invoice PDF from DGI" />
@@ -140,7 +135,7 @@
 
                     <div class="alert alert-info" role="alert" invisible="dgi_sent or state != 'posted'">
                         <p><strong>Ready to Send</strong></p>
-                        <p>Click the "Send to DGI" button to transmit this invoice to DGI Panama.</p>
+                        <p>This invoice is queued for DGI. Use Process now or wait for the electronic invoicing cron.</p>
                     </div>
 
                     <div class="alert alert-warning" role="alert" invisible="state == 'posted'">
