@@ -24,7 +24,7 @@ class DgiAnulacionWizard(models.TransientModel):
     motivo_anulacion = fields.Text(
         string="Cancellation Reason",
         required=True,
-        help="Reason for canceling this invoice (minimum 10 characters, maximum 500 characters)",
+        help="Reason for canceling this invoice (minimum 20 characters, maximum 500 characters)",
     )
 
     # Document data fields (readonly, for display)
@@ -111,14 +111,13 @@ class DgiAnulacionWizard(models.TransientModel):
         if not self.motivo_anulacion:
             raise UserError(_("Please provide a cancellation reason."))
 
-        # Length is also enforced by _check_motivo_anulacion_length (20-500).
         motivo_anulacion_clean = (self.motivo_anulacion or "").strip()
         motivo_length = len(motivo_anulacion_clean)
 
-        if motivo_length < 10:
+        if motivo_length < 20:
             raise UserError(
                 _(
-                    "Cancellation reason must be at least 10 characters long. Current length: %d characters."
+                    "Cancellation reason must be at least 20 characters long. Current length: %d characters."
                 )
                 % motivo_length
             )
