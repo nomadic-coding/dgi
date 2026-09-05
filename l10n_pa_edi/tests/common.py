@@ -68,12 +68,13 @@ class L10nPaEdiTestCommon(AccountTestInvoicingCommon):
 
     @classmethod
     def _configure_hka_settings(cls):
-        ICP = cls.env["ir.config_parameter"].sudo()
-        ICP.set_param("l10n_pa_edi.hka_api_url", "https://hka.test.example")
-        ICP.set_param("l10n_pa_edi.hka_usuario", "test-user")
-        ICP.set_param("l10n_pa_edi.hka_clave", "test-password")
-        ICP.set_param("l10n_pa_edi.hka_timeout", "30")
-        ICP.set_param("l10n_pa_edi.hka_verify_ssl", "True")
+        cls.company.write({
+            "hka_api_url": "https://hka.test.example",
+            "hka_usuario": "test-user",
+            "hka_clave": "test-password",
+            "hka_timeout": 30,
+            "hka_verify_ssl": True,
+        })
 
     @classmethod
     def _configure_dgi_journal(cls):

@@ -6,31 +6,23 @@ from odoo import fields, models
 class ResConfigSettings(models.TransientModel):
     _inherit = "res.config.settings"
 
-    # HKA API Configuration
     hka_api_url = fields.Char(
-        string="HKA API URL",
-        config_parameter="l10n_pa_edi.hka_api_url",
-        default="https://demointegracion.thefactoryhka.com.pa",
-        help="The Factory HKA API endpoint URL",
+        related="company_id.hka_api_url",
+        readonly=False,
     )
     hka_usuario = fields.Char(
-        string="HKA Usuario",
-        config_parameter="l10n_pa_edi.hka_usuario",
-        help="HKA API username/user token",
+        related="company_id.hka_usuario",
+        readonly=False,
     )
     hka_clave = fields.Char(
-        string="HKA Clave",
-        config_parameter="l10n_pa_edi.hka_clave",
-        help="HKA API password",
+        related="company_id.hka_clave",
+        readonly=False,
     )
     hka_timeout = fields.Integer(
-        string="API Timeout (seconds)",
-        config_parameter="l10n_pa_edi.hka_timeout",
-        default=30,
+        related="company_id.hka_timeout",
+        readonly=False,
     )
     hka_verify_ssl = fields.Boolean(
-        string="Verify SSL",
-        config_parameter="l10n_pa_edi.hka_verify_ssl",
-        default=True,
+        related="company_id.hka_verify_ssl",
+        readonly=False,
     )
-

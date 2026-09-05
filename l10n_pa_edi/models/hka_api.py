@@ -18,48 +18,58 @@ class HkaApi(models.AbstractModel):
     _description = "HKA API Client"
 
     @api.model
-    def _get_config(self):
-        """Get HKA configuration from settings"""
-        ICP = self.env["ir.config_parameter"].sudo()
+    def _company_from_move(self, move_id=None):
+        if move_id:
+            move = self.env["account.move"].browse(move_id)
+            if move.exists():
+                return move.company_id
+        return self.env.company
+
+    @api.model
+    def _get_company(self, company=None):
+        return (company or self.env.company).sudo()
+
+    @api.model
+    def _get_config(self, company=None):
+        """Get HKA configuration from the company (not database-wide ICP)."""
+        company = self._get_company(company)
         return {
-            "api_url": ICP.get_param("l10n_pa_edi.hka_api_url", ""),
-            "usuario": ICP.get_param("l10n_pa_edi.hka_usuario", ""),
-            "clave": ICP.get_param("l10n_pa_edi.hka_clave", ""),
-            "timeout": int(ICP.get_param("l10n_pa_edi.hka_timeout", "30")),
-            "verify_ssl": ICP.get_param("l10n_pa_edi.hka_verify_ssl", "True") == "True",
+            "api_url": company.hka_api_url or "",
+            "usuario": company.hka_usuario or "",
+            "clave": company.hka_clave or "",
+            "timeout": int(company.hka_timeout or 30),
+            "verify_ssl": bool(company.hka_verify_ssl),
         }
 
     @api.model
-    def _get_access_token(self):
-        """Get valid JWT access token (cached or new)"""
-        ICP = self.env["ir.config_parameter"].sudo()
-
-        # Check cached token
-        token = ICP.get_param("l10n_pa_edi.hka_auth_token", "")
-        expiry_str = ICP.get_param("l10n_pa_edi.hka_auth_token_expiry", "")
+    def _get_access_token(self, company=None):
+        """Get a JWT cached on the company, or authenticate for a new one."""
+        company = self._get_company(company)
+        token = company.hka_auth_token or ""
+        expiry_str = company.hka_auth_token_expiry or ""
 
         if token and expiry_str:
             try:
                 expiry = datetime.fromisoformat(expiry_str)
                 if expiry > datetime.now():
-                    _logger.debug("Using cached HKA token")
+                    _logger.debug("Using cached HKA token for company %s", company.id)
                     return token
             except ValueError:
                 pass
 
-        # Get new token
         _logger.info("Authenticating with HKA to get new JWT token")
-        token = self._authenticate()
+        token = self._authenticate(company=company)
 
-        # Cache token for 55 minutes
         expiry = datetime.now() + timedelta(minutes=55)
-        ICP.set_param("l10n_pa_edi.hka_auth_token", token)
-        ICP.set_param("l10n_pa_edi.hka_auth_token_expiry", expiry.isoformat())
+        company.write({
+            "hka_auth_token": token,
+            "hka_auth_token_expiry": expiry.isoformat(),
+        })
 
         return token
 
     @api.model
-    def _authenticate(self):
+    def _authenticate(self, company=None):
         """
         Authenticate with HKA API to obtain JWT token
 
@@ -70,7 +80,7 @@ class HkaApi(models.AbstractModel):
 
         Returns: JWT token as string
         """
-        config = self._get_config()
+        config = self._get_config(company=company)
         auth_url = f"{config['api_url'].rstrip('/')}/api/Autenticacion"
 
         # During authentication, Authorization header is just the usuario (no "Bearer")
@@ -144,7 +154,7 @@ class HkaApi(models.AbstractModel):
             raise UserError(error_msg) from exc
 
     @api.model
-    def _make_request(self, endpoint, method="POST", data=None):
+    def _make_request(self, endpoint, method="POST", data=None, company=None):
         """
         Make HTTP request to HKA API
 
@@ -153,8 +163,8 @@ class HkaApi(models.AbstractModel):
         Returns:
             tuple: (http_status_code, response_data)
         """
-        config = self._get_config()
-        token = self._get_access_token()
+        config = self._get_config(company=company)
+        token = self._get_access_token(company=company)
 
         url = f"{config['api_url'].rstrip('/')}/{endpoint.lstrip('/')}"
 
@@ -259,7 +269,10 @@ class HkaApi(models.AbstractModel):
         try:
             _logger.info("Validating RUC %s with HKA API", ruc)
             http_status_code, response = self._make_request(
-                "api/ConsultaRucDv", method="POST", data=data
+                "api/ConsultaRucDv",
+                method="POST",
+                data=data,
+                company=self.env.company,
             )
 
             codigo = response.get("codigo", "")
@@ -348,7 +361,10 @@ class HkaApi(models.AbstractModel):
         try:
             _logger.info("Sending electronic document to HKA API")
             http_status_code, response = self._make_request(
-                "api/Enviar", method="POST", data=document_data
+                "api/Enviar",
+                method="POST",
+                data=document_data,
+                company=self._company_from_move(move_id),
             )
 
             # Parse response
@@ -475,7 +491,10 @@ class HkaApi(models.AbstractModel):
         try:
             _logger.info("Canceling electronic document via HKA API")
             http_status_code, response = self._make_request(
-                "api/Anulacion", method="POST", data=anulacion_data
+                "api/Anulacion",
+                method="POST",
+                data=anulacion_data,
+                company=self._company_from_move(move_id),
             )
 
             # Parse response
@@ -576,7 +595,10 @@ class HkaApi(models.AbstractModel):
         try:
             _logger.info("Downloading e-invoice from HKA API: %s", numero_documento)
             http_status_code, response = self._make_request(
-                "api/Descarga", method="POST", data=data
+                "api/Descarga",
+                method="POST",
+                data=data,
+                company=self._company_from_move(move_id),
             )
 
             # Check if download was successful
