@@ -23,7 +23,6 @@ API Documentation: https://felwiki.thefactoryhka.com.pa/
     "website": "https://www.starklabspanama.com",
     "depends": [
         "account",
-        "sale",
         "l10n_pa",
         "l10n_pa_location",
         "l10n_pa_dgi_code_mapping",
