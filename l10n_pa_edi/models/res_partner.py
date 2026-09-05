@@ -83,7 +83,7 @@ class ResPartner(models.Model):
         help="Full country name if country code is ZZ (not in DGI catalog)",
     )
     dgi_country_code = fields.Char(
-        string="Country Code",
+        string="ISO Country Code",
         related="country_id.code",
         store=True,
     )
