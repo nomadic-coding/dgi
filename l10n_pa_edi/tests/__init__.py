@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from . import test_dgi_anulacion
+from . import test_dgi_api_log_security
 from . import test_dgi_auto_send
 from . import test_dgi_company_config
 from . import test_dgi_government_cpbs

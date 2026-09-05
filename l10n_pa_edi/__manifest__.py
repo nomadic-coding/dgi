@@ -37,6 +37,7 @@ API Documentation: https://felwiki.thefactoryhka.com.pa/
         ],
     },
     "data": [
+        "security/hka_api_log_security.xml",
         "security/ir.model.access.csv",
         "data/account_tax_isc.xml",
         "views/res_config_settings_views.xml",
