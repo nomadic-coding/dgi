@@ -532,6 +532,26 @@ class AccountMove(models.Model):
             return "\u2028".join(name_chunks)[:500]
         return self._hka_normalize_lista_item_descripcion(fallback)
 
+    def _hka_cpbs_fields(self, product, uom_code):
+        """CPBS fields for government receivers. Requires a mapped product DGI code."""
+        self.ensure_one()
+        if self.partner_id.dgi_tipo_cliente_fe != "03":
+            return {}
+        if not product or not product.dgi_code_id or not product.dgi_code_id.code:
+            raise UserError(
+                _(
+                    "Product DGI/CPBS code is required when the receiver is a "
+                    "government entity (%s)."
+                )
+                % (product.display_name if product else _("Unknown product"))
+            )
+        code = product.dgi_code_id.code
+        return {
+            "codigoCPBS": code,
+            "codigoCPBSAbrev": code[:2],
+            "unidadMedidaCPBS": uom_code,
+        }
+
     def _hka_prepare_consolidated_invoice_items(self, item_lines, tax_parsed):
         """Build listaItems: one row per merged ITBMS tasa / ISC rate (net of all lines).
 
@@ -560,14 +580,7 @@ class AccountMove(models.Model):
             }
             if ref_line.product_id and ref_line.product_id.default_code:
                 it["codigo"] = ref_line.product_id.default_code
-            if (
-                self.partner_id.dgi_tipo_cliente_fe == "03"
-                and ref_line.product_id
-                and ref_line.product_id.dgi_code_id
-            ):
-                it["codigoCPBS"] = ref_line.product_id.dgi_code_id.code
-                it["codigoCPBSAbrev"] = ref_line.product_id.dgi_code_id.code[:2]
-                it["unidadMedidaCPBS"] = uom
+            it.update(self._hka_cpbs_fields(ref_line.product_id, uom))
             return it
 
         itbms_rows = list(tax_parsed["itbms_rows"])
@@ -726,11 +739,17 @@ class AccountMove(models.Model):
         for line in self.invoice_line_ids.filtered(
             lambda l: l.display_type == "product" and l.product_uom_id
         ):
-            # if not line.product_id.dgi_code_id:
-            #     errors.append(
-            #         _("Product DGI code is not set for product '%s' (line: %s)")
-            #         % (line.product_id.name or _("Unknown"), line.name or line.id)
-            #     )
+            if (
+                self.partner_id.dgi_tipo_cliente_fe == "03"
+                and not line.product_id.dgi_code_id
+            ):
+                errors.append(
+                    _(
+                        "Product DGI/CPBS code is not set for product '%s' (line: %s). "
+                        "Required for government receivers."
+                    )
+                    % (line.product_id.name or _("Unknown"), line.name or line.id)
+                )
             if not line.product_uom_id.dgi_code_id:
                 errors.append(
                     _("UOM DGI code is not set for UOM '%s' (line: %s)")
@@ -1272,10 +1291,11 @@ class AccountMove(models.Model):
                 if line.is_downpayment:
                     item["unidadMedida"] = "und"
 
-                if line.move_id.partner_id.dgi_tipo_cliente_fe == "03":
-                    item["codigoCPBS"] = line.product_id.dgi_code_id.code
-                    item["codigoCPBSAbrev"] = line.product_id.dgi_code_id.code[:2]
-                    item["unidadMedidaCPBS"] = line.product_uom_id.dgi_code_id.code
+                item.update(
+                    self._hka_cpbs_fields(
+                        line.product_id, item.get("unidadMedida")
+                    )
+                )
 
                 # Add tax details for this line using Odoo's computed tax information
                 if line.tax_ids:
