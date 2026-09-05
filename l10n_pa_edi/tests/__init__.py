@@ -8,4 +8,5 @@ from . import test_dgi_government_cpbs
 from . import test_dgi_invoice_xml
 from . import test_dgi_journal
 from . import test_dgi_live_hka
+from . import test_dgi_merge_rounding
 from . import test_dgi_ruc_validation

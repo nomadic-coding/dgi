@@ -98,29 +98,72 @@ class TestL10nPaEdiLiveHka(L10nPaEdiTestCommon):
         credit_note.action_send_to_dgi()
         self._assert_hka_accepted(credit_note, "0000000288")
 
+    @unittest.skipUnless(
+        os.environ.get("HKA_LIVE_DEDUCT"),
+        "Set HKA_LIVE_DEDUCT=1 to resend the 292-294 deduction invoices",
+    )
     def test_live_deduction_invoices_accepted_by_hka(self):
         """Send the down-payment remainder and a negative-discount invoice to HKA."""
-        self.dgi_sequence.sudo().write({"number_next": 289})
+        self.dgi_sequence.sudo().write({"number_next": 292})
         invoice_date = "2026-09-05"
         _sale, downpayment, final = self._create_sale_final_invoice_with_downpayment(
             partner=self.partner_live_contribuyente,
             downpayment_date=invoice_date,
             final_date=invoice_date,
         )
-        self.assertEqual(downpayment.name, "0000000289")
-        self.assertEqual(final.name, "0000000290")
+        self.assertEqual(downpayment.name, "0000000292")
+        self.assertEqual(final.name, "0000000293")
         self._assert_hka_payload_deducts_negative_lines(final, 1000.0)
 
         downpayment.action_send_to_dgi()
-        self._assert_hka_accepted(downpayment, "0000000289")
+        self._assert_hka_accepted(downpayment, "0000000292")
         final.action_send_to_dgi()
-        self._assert_hka_accepted(final, "0000000290")
+        self._assert_hka_accepted(final, "0000000293")
 
         discount = self._create_negative_discount_invoice(
             partner=self.partner_live_contribuyente,
             invoice_date=invoice_date,
         )
-        self.assertEqual(discount.name, "0000000291")
+        self.assertEqual(discount.name, "0000000294")
         self._assert_hka_payload_deducts_negative_lines(discount, 1000.0)
         discount.action_send_to_dgi()
-        self._assert_hka_accepted(discount, "0000000291")
+        self._assert_hka_accepted(discount, "0000000294")
+
+    def test_live_merged_rounding_invoices_accepted_by_hka(self):
+        """Send merged same-code lines whose unit price is not a clean 2-decimal split."""
+        self.dgi_sequence.sudo().write({"number_next": 297})
+        invoice_date = "2026-09-05"
+
+        uneven = self._create_dgi_invoice(
+            partner=self.partner_live_contribuyente,
+            invoice_date=invoice_date,
+            line_vals=[
+                {**self._default_invoice_line_vals(), "name": "Line A", "quantity": 1, "price_unit": 10.00},
+                {**self._default_invoice_line_vals(), "name": "Line B", "quantity": 1, "price_unit": 10.00},
+                {**self._default_invoice_line_vals(), "name": "Line C", "quantity": 1, "price_unit": 10.01},
+            ],
+        )
+        self.assertEqual(uneven.name, "0000000297")
+        payload = uneven._prepare_dgi_document_data()
+        self.assertEqual(len(payload["documento"]["listaItems"]), 1)
+        self._assert_hka_payload_matches_move(uneven, payload)
+        uneven.action_send_to_dgi()
+        self._assert_hka_accepted(uneven, "0000000297")
+
+        pennies = self._create_dgi_invoice(
+            partner=self.partner_live_contribuyente,
+            invoice_date=invoice_date,
+            line_vals=[
+                {
+                    **self._default_invoice_line_vals(),
+                    "name": "Penny %s" % index,
+                    "quantity": 1,
+                    "price_unit": 0.33,
+                }
+                for index in range(7)
+            ],
+        )
+        self.assertEqual(pennies.name, "0000000298")
+        self._assert_hka_payload_matches_move(pennies)
+        pennies.action_send_to_dgi()
+        self._assert_hka_accepted(pennies, "0000000298")

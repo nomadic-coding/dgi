@@ -11,6 +11,13 @@ from odoo.tools.mail import html2plaintext
 
 _logger = logging.getLogger(__name__)
 
+HKA_ITBMS_RATES = {
+    "00": 0.0,
+    "01": 0.07,
+    "02": 0.10,
+    "03": 0.15,
+}
+
 
 class AccountMove(models.Model):
     _inherit = "account.move"
@@ -329,6 +336,11 @@ class AccountMove(models.Model):
         if truncate and max_len:
             return plain[:max_len]
         return plain
+
+    def _hka_itbms_amount_from_base(self, precio_item, tasa):
+        """HKA validates valorITBMS against precioItem * official ITBMS rate."""
+        rate = HKA_ITBMS_RATES.get(tasa or "00", 0.0)
+        return self.currency_id.round(float(precio_item) * rate)
 
     def _hka_sync_item_valor_total(self, item):
         """valorTotal must match precioItem + valorITBMS + valorISC (HKA)."""
@@ -1464,9 +1476,7 @@ class AccountMove(models.Model):
             "cantidad": "{:.2f}".format(qty),
             "precioUnitario": unit_str,
             "precioItem": "{:.2f}".format(precio_item),
-            "valorTotal": "{:.2f}".format(
-                self.currency_id.round(sum(lines.mapped("price_total")))
-            ),
+            "valorTotal": "{:.2f}".format(precio_item),
         }
         codes = {
             product.default_code
@@ -1496,24 +1506,26 @@ class AccountMove(models.Model):
         item.update(self._hka_cpbs_fields(ref.product_id, item.get("unidadMedida")))
 
         itbms_tasa = None
-        itbms = 0.0
         isc_rate = None
         isc = 0.0
         for line in lines:
-            line_tasa, line_itbms, line_isc_rate, line_isc = self._hka_line_tax_amounts(
+            line_tasa, _line_itbms, line_isc_rate, line_isc = self._hka_line_tax_amounts(
                 line
             )
             if line_tasa:
                 itbms_tasa = line_tasa
-                itbms += line_itbms
             if line_isc_rate is not None:
                 isc_rate = line_isc_rate
                 isc += line_isc
         item["tasaITBMS"] = itbms_tasa or "00"
-        item["valorITBMS"] = "{:.2f}".format(self.currency_id.round(itbms))
+        # Tax the merged net. Summing per-line rounded ITBMS fails HKA when
+        # many small lines accumulate (7 x 0.33 -> 0.14 vs 2.31 * 7% = 0.16).
+        itbms = self._hka_itbms_amount_from_base(precio_item, item["tasaITBMS"])
+        item["valorITBMS"] = "{:.2f}".format(itbms)
         if isc_rate is not None:
             item["tasaISC"] = str(isc_rate)
             item["valorISC"] = "{:.2f}".format(self.currency_id.round(isc))
+        self._hka_sync_item_valor_total(item)
         return item
 
     def _hka_prepare_merged_items_by_dgi_code(self, product_lines):
@@ -1604,8 +1616,11 @@ class AccountMove(models.Model):
             merged_items = self._hka_prepare_merged_items_by_dgi_code(product_lines)
         if merged_items:
             lista_items = merged_items
-            self._hka_reconcile_lista_items_itbms(
-                lista_items, product_lines, total_itbms
+            total_itbms = self.currency_id.round(
+                sum(float(item.get("valorITBMS") or 0.0) for item in lista_items)
+            )
+            total_isc = self.currency_id.round(
+                sum(float(item.get("valorISC") or 0.0) for item in lista_items)
             )
         elif consolidate_lines:
             lista_items = self._hka_prepare_consolidated_invoice_items(
@@ -1624,20 +1639,24 @@ class AccountMove(models.Model):
                 _("Cannot send to DGI: invoice has no product lines for e-factura items.")
             )
 
+        hka_total = self.currency_id.round(
+            self.amount_untaxed + total_itbms + total_isc
+        )
+
         # Build totalesSubTotales
         totales_sub_totales = {
             "totalPrecioNeto": "{:.2f}".format(self.amount_untaxed),
             "totalITBMS": "{:.2f}".format(total_itbms),
             "totalMontoGravado": "{:.2f}".format(total_itbms + total_isc),
-            "totalFactura": "{:.2f}".format(self.amount_total),
-            "totalValorRecibido": "{:.2f}".format(self.amount_total),
-            "totalTodosItems": "{:.2f}".format(self.amount_total),
+            "totalFactura": "{:.2f}".format(hka_total),
+            "totalValorRecibido": "{:.2f}".format(hka_total),
+            "totalTodosItems": "{:.2f}".format(hka_total),
             "tiempoPago": "2" if self.hka_forma_pago == "01" else "1",
             "nroItems": str(len(lista_items)),
             "listaFormaPago": [
                 {
                     "formaPagoFact": self.hka_forma_pago,
-                    "valorCuotaPagada": "{:.2f}".format(self.amount_total),
+                    "valorCuotaPagada": "{:.2f}".format(hka_total),
                 }
             ],
         }

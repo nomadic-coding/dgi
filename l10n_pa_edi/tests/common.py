@@ -309,6 +309,52 @@ class L10nPaEdiTestCommon(AccountTestInvoicingCommon):
         for item in items:
             self.assertGreater(float(item["cantidad"]), 0)
             self.assertGreaterEqual(float(item["precioItem"]), 0)
+            self._assert_hka_item_formula(item)
+        return payload
+
+    def _assert_hka_item_formula(self, item):
+        """HKA: precioItem = cantidad * (precioUnitario - precioUnitarioDescuento)."""
+        qty = float(item["cantidad"])
+        unit = float(item["precioUnitario"])
+        discount = float(item.get("precioUnitarioDescuento") or 0.0)
+        precio = float(item["precioItem"])
+        self.assertAlmostEqual(qty * (unit - discount), precio, places=2)
+        self.assertAlmostEqual(
+            float(item["valorTotal"]),
+            precio
+            + float(item.get("valorITBMS") or 0.0)
+            + float(item.get("valorISC") or 0.0),
+            places=2,
+        )
+        tasa = item.get("tasaITBMS") or "00"
+        rate = {"00": 0.0, "01": 0.07, "02": 0.10, "03": 0.15}.get(tasa, 0.0)
+        self.assertAlmostEqual(
+            float(item.get("valorITBMS") or 0.0),
+            round(precio * rate, 2),
+            places=2,
+        )
+
+    def _assert_hka_payload_matches_move(self, move, payload=None):
+        payload = payload or move._prepare_dgi_document_data()
+        items = payload["documento"]["listaItems"]
+        totales = payload["documento"]["totalesSubTotales"]
+        self.assertTrue(items)
+        self.assertEqual(totales["nroItems"], str(len(items)))
+        self.assertAlmostEqual(float(totales["totalPrecioNeto"]), move.amount_untaxed)
+        self.assertAlmostEqual(
+            sum(float(item["precioItem"]) for item in items),
+            move.amount_untaxed,
+        )
+        self.assertAlmostEqual(
+            sum(float(item["valorITBMS"]) for item in items),
+            float(totales["totalITBMS"]),
+        )
+        self.assertAlmostEqual(
+            sum(float(item["valorTotal"]) for item in items),
+            float(totales["totalFactura"]),
+        )
+        for item in items:
+            self._assert_hka_item_formula(item)
         return payload
 
     def documento_to_xml_tree(self, payload):
