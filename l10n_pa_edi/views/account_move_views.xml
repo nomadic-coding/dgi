@@ -97,12 +97,19 @@
                         <field name="dgi_error_message" widget="text" readonly="1" />
                     </group>
 
-                    <div class="alert alert-success" role="alert" invisible="not dgi_sent">
+                    <div class="alert alert-success" role="alert"
+                         invisible="not dgi_sent or dgi_status == 'anulado'">
                         <p><strong>✓ Document Sent Successfully</strong></p>
                         <p>This document has been successfully sent to DGI Panama.</p>
                         <p>CUFE:
                             <field name="dgi_cufe" readonly="1" nolabel="1" />
                         </p>
+                    </div>
+
+                    <div class="alert alert-warning" role="alert"
+                         invisible="dgi_status != 'anulado'">
+                        <p><strong>Canceled in DGI</strong></p>
+                        <p>This document was canceled (anulado) in DGI Panama and cannot be modified.</p>
                     </div>
 
                     <div class="alert alert-info" role="alert" invisible="dgi_sent or state != 'posted'">
