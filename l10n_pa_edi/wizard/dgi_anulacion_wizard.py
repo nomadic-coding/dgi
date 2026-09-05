@@ -94,11 +94,10 @@ class DgiAnulacionWizard(models.TransientModel):
         return res
 
     def action_anular(self):
-        """Cancel the invoice in Odoo first, then submit cancellation to DGI"""
+        """Cancel the invoice in DGI first, then cancel it in Odoo."""
         self.ensure_one()
         move = self.move_id
 
-        # Validate invoice state
         if not move.dgi_sent:
             raise UserError(_("This invoice has not been sent to DGI yet."))
 
@@ -112,7 +111,7 @@ class DgiAnulacionWizard(models.TransientModel):
         if not self.motivo_anulacion:
             raise UserError(_("Please provide a cancellation reason."))
 
-        # Validate motivoAnulacion length (API requirement: typically 10-500 characters)
+        # Length is also enforced by _check_motivo_anulacion_length (20-500).
         motivo_anulacion_clean = (self.motivo_anulacion or "").strip()
         motivo_length = len(motivo_anulacion_clean)
 
@@ -132,65 +131,45 @@ class DgiAnulacionWizard(models.TransientModel):
                 % motivo_length
             )
 
-        # Step 1: Cancel the invoice in Odoo first
-        # Use context flag to bypass DGI cancellation check
-        move.with_context(force_dgi_cancel=True).button_cancel()
-        move.message_post(
-            body=_("Invoice canceled in Odoo before DGI cancellation."),
-            message_type="notification",
-        )
-
-        # Step 2: Submit cancellation to DGI
-        # Prepare cancellation data according to API specification
         anulacion_data = {
             "motivoAnulacion": motivo_anulacion_clean,
             "datosDocumento": {
                 "codigoSucursalEmisor": self.codigo_sucursal_emisor or "",
                 "numeroDocumentoFiscal": self.numero_documento_fiscal or "",
                 "puntoFacturacionFiscal": (self.punto_facturacion_fiscal.zfill(3)),
-                "serialDispositivo": "",  # Not available in current model
+                "serialDispositivo": "",
                 "tipoDocumento": self.tipo_documento,
                 "tipoEmision": self.tipo_emision,
             },
         }
 
-        # Call HKA API to cancel the invoice
         hka_api = self.env["l10n_pa_edi.hka_api"]
         result = hka_api.anular(anulacion_data, move_id=move.id)
 
-        # Update invoice status
-        if result.get("success"):
-            move.write(
-                {
-                    "dgi_status": "anulado",
-                    "dgi_error_message": False,
-                }
-            )
-            message = (
-                _("Invoice successfully canceled in DGI. Reason: %s")
-                % self.motivo_anulacion
-            )
-            move.message_post(
-                body=message,
-                message_type="notification",
-            )
-            return True
-        else:
+        if not result.get("success"):
             error_message = (
                 result.get("error_message")
                 or result.get("mensaje")
                 or _("Unknown error")
             )
-            move.write(
-                {
-                    "dgi_error_message": error_message,
-                }
-            )
-            # Invoice was already canceled in Odoo, so we need to inform user about DGI failure
             raise UserError(
                 _(
-                    "Invoice was canceled in Odoo, but failed to cancel in DGI: %s. "
-                    "You may need to manually handle this situation."
+                    "Failed to cancel the invoice in DGI: %s. "
+                    "The invoice was not canceled in Odoo."
                 )
                 % error_message
             )
+
+        move.write(
+            {
+                "dgi_status": "anulado",
+                "dgi_error_message": False,
+            }
+        )
+        move.with_context(force_dgi_cancel=True).button_cancel()
+        move.message_post(
+            body=_("Invoice successfully canceled in DGI. Reason: %s")
+            % self.motivo_anulacion,
+            message_type="notification",
+        )
+        return True
