@@ -1345,7 +1345,7 @@ class AccountMove(models.Model):
             "totalFactura": "{:.2f}".format(self.amount_total),
             "totalValorRecibido": "{:.2f}".format(self.amount_total),
             "totalTodosItems": "{:.2f}".format(self.amount_total),
-            "tiempoPago": "1",  # 1=Immediate, 2=Credit
+            "tiempoPago": "2" if self.hka_forma_pago == "01" else "1",
             "nroItems": str(len(lista_items)),
             "listaFormaPago": [
                 {

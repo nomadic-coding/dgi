@@ -117,6 +117,18 @@ class TestL10nPaEdiInvoiceXml(L10nPaEdiTestCommon):
         with self.assertRaises(UserError):
             invoice.action_send_to_dgi()
 
+    def test_credit_payment_sets_tiempo_pago(self):
+        invoice = self._create_dgi_invoice(
+            partner=self.partner_contribuyente,
+            extra_vals={"hka_forma_pago": "01"},
+        )
+        payload = invoice._prepare_dgi_document_data()
+        self.assertEqual(payload["documento"]["totalesSubTotales"]["tiempoPago"], "2")
+        self.assertEqual(
+            payload["documento"]["totalesSubTotales"]["listaFormaPago"][0]["formaPagoFact"],
+            "01",
+        )
+
     def test_cannot_send_twice(self):
         invoice = self._create_dgi_invoice()
         invoice.write({
