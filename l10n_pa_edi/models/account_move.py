@@ -1288,7 +1288,7 @@ class AccountMove(models.Model):
                 # Add UOM if available
                 item["unidadMedida"] = line.product_uom_id.dgi_code_id.code
 
-                if line.is_downpayment:
+                if getattr(line, "is_downpayment", False):
                     item["unidadMedida"] = "und"
 
                 item.update(
