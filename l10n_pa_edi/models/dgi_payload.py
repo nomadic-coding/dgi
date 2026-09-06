@@ -36,6 +36,20 @@ class L10nPaEdiPayload(models.AbstractModel):
             date_value = datetime.combine(date_value, time.min)
         return date_value.strftime('%Y-%m-%dT%H:%M:%S-05:00')
 
+    def _hka_cafe_lang(self, move):
+        """Language used on the HKA CAFE. Follow the invoice partner, then company."""
+        installed = set(self.env["res.lang"].sudo().search([("active", "=", True)]).mapped("code"))
+        for code in (move.partner_id.lang, move.company_id.partner_id.lang, self.env.lang):
+            if code and code in installed:
+                return code
+        return self.env.lang or "en_US"
+
+    def _hka_info_pago_cuota(self, move):
+        """HKA infoPagoCuota must be 15–1000 characters. Printed on the CAFE."""
+        return self.with_context(lang=self._hka_cafe_lang(move)).env._(
+            "Due-date installment."
+        )
+
     def _prepare_dgi_informacion_interes(self, move):
         """Plain text for HKA (narration is HTML); line breaks as U+2028 LINE SEPARATOR."""
         move.ensure_one()
@@ -457,6 +471,12 @@ class L10nPaEdiPayload(models.AbstractModel):
         ref_errors = self._dgi_referenced_cufe_errors(move)
         if ref_errors:
             raise UserError('\n'.join(ref_errors))
+        credit_errors = self._dgi_credit_note_total_errors(move)
+        if credit_errors:
+            raise UserError('\n'.join(credit_errors))
+        plazo_errors = self._dgi_credit_payment_errors(move)
+        if plazo_errors:
+            raise UserError('\n'.join(plazo_errors))
 
     def _hka_dgi_code_merge_key(self, move, line):
         """Group key for same-code merge. Unmapped products stay on their own line."""
@@ -661,7 +681,17 @@ class L10nPaEdiPayload(models.AbstractModel):
         if not lista_items:
             raise UserError(_('Cannot send to DGI: invoice has no product lines for e-factura items.'))
         hka_total = move.currency_id.round(move.amount_untaxed + total_itbms + total_isc)
-        totales_sub_totales = {'totalPrecioNeto': '{:.2f}'.format(move.amount_untaxed), 'totalITBMS': '{:.2f}'.format(total_itbms), 'totalMontoGravado': '{:.2f}'.format(total_itbms + total_isc), 'totalFactura': '{:.2f}'.format(hka_total), 'totalValorRecibido': '{:.2f}'.format(hka_total), 'totalTodosItems': '{:.2f}'.format(hka_total), 'tiempoPago': '2' if move.hka_forma_pago == '01' else '1', 'nroItems': str(len(lista_items)), 'listaFormaPago': [{'formaPagoFact': move.hka_forma_pago, 'valorCuotaPagada': '{:.2f}'.format(hka_total), **({'descFormaPago': move.hka_desc_forma_pago.strip()} if move.hka_forma_pago == '99' and move.hka_desc_forma_pago else {})}]}
+        tiempo_pago = '2' if move.hka_forma_pago == '01' else '1'
+        totales_sub_totales = {'totalPrecioNeto': '{:.2f}'.format(move.amount_untaxed), 'totalITBMS': '{:.2f}'.format(total_itbms), 'totalMontoGravado': '{:.2f}'.format(total_itbms + total_isc), 'totalFactura': '{:.2f}'.format(hka_total), 'totalValorRecibido': '{:.2f}'.format(hka_total), 'totalTodosItems': '{:.2f}'.format(hka_total), 'tiempoPago': tiempo_pago, 'nroItems': str(len(lista_items)), 'listaFormaPago': [{'formaPagoFact': move.hka_forma_pago, 'valorCuotaPagada': '{:.2f}'.format(hka_total), **({'descFormaPago': move.hka_desc_forma_pago.strip()} if move.hka_forma_pago == '99' and move.hka_desc_forma_pago else {})}]}
+        if tiempo_pago == '2':
+            if not move.invoice_date_due:
+                raise UserError(_('Invoice due date is required when Payment Method is 01 (Credit).'))
+            totales_sub_totales['listaPagoPlazo'] = [{
+                'fechaVenceCuota': self._format_dgi_datetime(move.invoice_date_due),
+                'valorCuota': '{:.2f}'.format(hka_total),
+                # HKA treats a missing/empty note as length 0; DGI requires 15–1000.
+                'infoPagoCuota': self._hka_info_pago_cuota(move),
+            }]
         if total_isc > 0:
             totales_sub_totales['totalISC'] = '{:.2f}'.format(total_isc)
         if move.hka_destino_operacion == '2' or move.partner_id.dgi_tipo_cliente_fe == '04':
@@ -674,17 +704,14 @@ class L10nPaEdiPayload(models.AbstractModel):
                 export_vals['tipoDeCambio'] = '{:.4f}'.format(rate)
                 export_vals['montoMonedaExtranjera'] = '{:.4f}'.format(rate * move.amount_total)
             datos_transaccion['datosFacturaExportacion'] = export_vals
-        lista_docs_fiscal_referenciados = []
-        if move.move_type == 'out_refund' and move.reversed_entry_id:
+        if move.hka_tipo_documento == '04' and move.reversed_entry_id:
             original_invoice = move.reversed_entry_id
             if not original_invoice.invoice_date:
                 raise UserError(_('Cannot prepare credit note: Original invoice %s is missing invoice date') % original_invoice.name)
             doc_referenciado = {'fechaEmisionDocFiscalReferenciado': self._format_dgi_datetime(original_invoice.invoice_date)}
             if original_invoice.dgi_cufe:
                 doc_referenciado['cufeFEReferenciada'] = original_invoice.dgi_cufe
-            lista_docs_fiscal_referenciados.append(doc_referenciado)
-        if lista_docs_fiscal_referenciados:
-            datos_transaccion['listaDocsFiscalReferenciados'] = lista_docs_fiscal_referenciados
+            datos_transaccion['listaDocsFiscalReferenciados'] = [doc_referenciado]
         documento = {'codigoSucursalEmisor': move.journal_id.dgi_codigo_sucursal_emisor, 'datosTransaccion': datos_transaccion, 'listaItems': lista_items, 'totalesSubTotales': totales_sub_totales}
         return {'documento': documento}
 
@@ -744,6 +771,36 @@ class L10nPaEdiPayload(models.AbstractModel):
                 _("Cannot send credit note: Original invoice date is missing for invoice %s")
                 % origin.name
             ]
+        return []
+
+    def _dgi_credit_note_total_errors(self, move):
+        """Tipo 04 cannot exceed the referenced invoice total (DGI B606h)."""
+        move.ensure_one()
+        if move.hka_tipo_documento != '04' or not move.reversed_entry_id:
+            return []
+        origin = move.reversed_entry_id
+        rounding = move.currency_id.rounding or 0.01
+        if float_compare(move.amount_total, origin.amount_total, precision_rounding=rounding) > 0:
+            return [
+                _(
+                    "Credit note total %(credit).2f exceeds referenced invoice "
+                    "%(origin)s total %(origin_total).2f."
+                )
+                % {
+                    "credit": move.amount_total,
+                    "origin": origin.name,
+                    "origin_total": origin.amount_total,
+                }
+            ]
+        return []
+
+    def _dgi_credit_payment_errors(self, move):
+        """HKA tiempoPago 2 requires listaPagoPlazo (invoice due date)."""
+        move.ensure_one()
+        if move.hka_forma_pago != '01':
+            return []
+        if not move.invoice_date_due:
+            return [_("Invoice due date is required when Payment Method is 01 (Credit).")]
         return []
 
     def _check_dgi_product_line_taxes(self, move):

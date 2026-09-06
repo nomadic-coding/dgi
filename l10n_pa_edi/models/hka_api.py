@@ -329,34 +329,11 @@ class HkaApi(models.AbstractModel):
 
         return result
 
-    @api.model
-    @api.private
-    def _hka_duplicate_enviar_belongs_to_move(self, move, cufe):
-        """102 is this invoice's retry, not another move that reused the fiscal number."""
-        if not move:
-            return True
-        if move.dgi_cufe and move.dgi_cufe != cufe:
-            return False
-        other = move.env["account.move"].search(
-            [
-                ("id", "!=", move.id),
-                ("company_id", "=", move.company_id.id),
-                "|",
-                "&",
-                ("name", "=", move.name),
-                ("dgi_cufe", "!=", False),
-                ("dgi_cufe", "=", cufe),
-            ],
-            limit=1,
-        )
-        return not other
-
     def _parse_enviar_response(self, response, move=None):
         """Turn an HKA Enviar JSON body into the structured result Process now stores.
 
-        Code 102 (duplicate) still includes the accepted CUFE. Treat that as
-        success so a retry after a dropped commit does not leave the invoice
-        stuck on Process now, unless another invoice already owns that number.
+        Code 102 (duplicate) is always a failure. HKA may still return a CUFE
+        for the already-accepted number; do not store it or mark the invoice sent.
         """
         response = response or {}
         codigo = str(response.get("codigo") or "")
@@ -390,26 +367,20 @@ class HkaApi(models.AbstractModel):
                 "error_message": False,
                 **payload,
             }
-        if codigo == "102" and cufe:
-            if self._hka_duplicate_enviar_belongs_to_move(move, cufe):
-                return {
-                    "success": True,
-                    "status": "procesado",
-                    "error_message": False,
-                    **payload,
-                }
+        if codigo == "102":
             return {
                 "success": False,
-                "status": resultado or "Error: 102",
+                "status": "Error: 102",
                 "error_message": _(
-                    "Code: 102, Message: %(mensaje)s. Fiscal number %(number)s "
-                    "already belongs to another e-factura."
-                )
-                % {
-                    "mensaje": mensaje,
-                    "number": move.name if move else "",
+                    "Code: 102, Message: %(mensaje)s"
+                ) % {
+                    "mensaje": mensaje or _("The document is duplicated"),
                 },
                 **payload,
+                "dgi_cufe": False,
+                "dgi_qr": False,
+                "dgi_fecha_recepcion": False,
+                "dgi_protocolo_autorizacion": False,
             }
         return {
             "success": False,

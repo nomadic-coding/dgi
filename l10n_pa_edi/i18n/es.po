@@ -234,14 +234,14 @@ msgstr "La entrega de CAFE %(delivery)s no es válida para el formato CAFE %(fmt
 #. module: l10n_pa_edi
 #. odoo-python
 #: code:addons/l10n_pa_edi/models/account_move.py:0
-msgid "Contingency Start is required when Emission Type is 02 or 04."
-msgstr "El inicio de contingencia es obligatorio cuando el tipo de emisión es 02 o 04."
+msgid "Contingency Start is required when Emission Type is 02."
+msgstr "El inicio de contingencia es obligatorio cuando el tipo de emisión es 02."
 
 #. module: l10n_pa_edi
 #. odoo-python
 #: code:addons/l10n_pa_edi/models/account_move.py:0
-msgid "Contingency Reason must be at least %(min)s characters when Emission Type is 02 or 04."
-msgstr "El motivo de contingencia debe tener al menos %(min)s caracteres cuando el tipo de emisión es 02 o 04."
+msgid "Contingency Reason must be at least %(min)s characters when Emission Type is 02."
+msgstr "El motivo de contingencia debe tener al menos %(min)s caracteres cuando el tipo de emisión es 02."
 
 #. module: l10n_pa_edi
 #. odoo-python
@@ -312,8 +312,50 @@ msgstr "No se puede enviar la nota de crédito: falta la fecha de la factura ori
 #. module: l10n_pa_edi
 #. odoo-python
 #: code:addons/l10n_pa_edi/models/hka_api.py:0
-msgid "Code: 102, Message: %(mensaje)s. Fiscal number %(number)s already belongs to another e-factura."
-msgstr "Código: 102, Mensaje: %(mensaje)s. El número fiscal %(number)s ya pertenece a otra e-factura."
+msgid "Code: 102, Message: %(mensaje)s"
+msgstr "Código: 102, Mensaje: %(mensaje)s"
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "Emission Type 03/04 (post authorization) is not supported."
+msgstr "El tipo de emisión 03/04 (autorización posterior) no está soportado."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "DGI settings cannot be changed after the invoice is sent."
+msgstr "Los datos DGI no se pueden cambiar después de enviar la factura."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/dgi_payload.py:0
+msgid "Invoice due date is required when Payment Method is 01 (Credit)."
+msgstr "La fecha de vencimiento es obligatoria cuando la forma de pago es 01 (Crédito)."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/dgi_payload.py:0
+msgid "Due-date installment."
+msgstr "Cuota a fecha de vencimiento."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "DGI does not allow cancellation more than %(hours)s hours after the invoice date (%(date)s)."
+msgstr "DGI no permite la anulación más de %(hours)s horas después de la fecha de la factura (%(date)s)."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/dgi_payload.py:0
+msgid "Credit note total %(credit).2f exceeds referenced invoice %(origin)s total %(origin_total).2f."
+msgstr "El total de la nota de crédito %(credit).2f supera el total %(origin_total).2f de la factura referenciada %(origin)s."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/hka_api.py:0
+msgid "The document is duplicated"
+msgstr "El documento está duplicado"
 
 #. module: l10n_pa_edi
 #. odoo-python

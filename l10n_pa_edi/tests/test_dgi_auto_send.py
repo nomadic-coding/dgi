@@ -87,12 +87,16 @@ class TestL10nPaEdiAutoSend(L10nPaEdiTestCommon):
             {},
         )
 
-    def test_duplicate_enviar_with_cufe_marks_invoice_sent(self):
+    def test_duplicate_enviar_is_error_and_does_not_proceed(self):
         invoice = self._create_dgi_invoice(partner=self.partner_contribuyente)
-        parsed = self.env["l10n_pa_edi.hka_api"]._parse_enviar_response(HKA_DUPLICATE)
-        self.assertTrue(parsed["success"])
-        self.assertEqual(parsed["dgi_cufe"], "FE-DUPLICATE-CUFE")
-        self.assertEqual(parsed["status"], "procesado")
+        parsed = self.env["l10n_pa_edi.hka_api"]._parse_enviar_response(
+            HKA_DUPLICATE, move=invoice
+        )
+        self.assertFalse(parsed["success"])
+        self.assertFalse(parsed["dgi_cufe"])
+        self.assertEqual(parsed["status"], "Error: 102")
+        self.assertIn("102", parsed["error_message"])
+        self.assertIn("duplicado", parsed["error_message"])
 
         with patch.object(
             type(self.env["l10n_pa_edi.hka_api"]),
@@ -105,29 +109,14 @@ class TestL10nPaEdiAutoSend(L10nPaEdiTestCommon):
         ):
             invoice.action_process_edi_web_services(with_commit=False)
 
-        self.assertEqual(invoice.edi_state, "sent")
-        self.assertEqual(invoice.dgi_cufe, "FE-DUPLICATE-CUFE")
-        self.assertTrue(invoice.dgi_sent)
-
-    def test_duplicate_enviar_belongs_to_same_move_retry(self):
-        invoice = self._create_dgi_invoice(partner=self.partner_contribuyente)
-        api = self.env["l10n_pa_edi.hka_api"]
-        parsed = api._parse_enviar_response(HKA_DUPLICATE, move=invoice)
-        self.assertTrue(parsed["success"])
-
-        self._mark_dgi_sent(invoice, dgi_cufe="FE-DUPLICATE-CUFE")
-        parsed_again = api._parse_enviar_response(HKA_DUPLICATE, move=invoice)
-        self.assertTrue(parsed_again["success"])
-
-    def test_duplicate_enviar_rejected_when_another_invoice_owns_cufe(self):
-        owner = self._create_dgi_invoice(partner=self.partner_contribuyente)
-        self._mark_dgi_sent(owner, dgi_cufe="FE-DUPLICATE-CUFE")
-        other = self._create_dgi_invoice(partner=self.partner_contribuyente)
-        parsed = self.env["l10n_pa_edi.hka_api"]._parse_enviar_response(
-            HKA_DUPLICATE, move=other
-        )
-        self.assertFalse(parsed["success"])
-        self.assertIn("already belongs", parsed["error_message"])
+        self.assertEqual(invoice.edi_state, "to_send")
+        self.assertFalse(invoice.dgi_cufe)
+        self.assertFalse(invoice.dgi_sent)
+        self.assertIn("102", invoice.dgi_error_message)
+        self.assertIn("duplicado", invoice.dgi_error_message)
+        edi_doc = invoice._l10n_pa_hka_edi_documents()
+        self.assertTrue(edi_doc.error)
+        self.assertIn("102", edi_doc.error)
 
     def test_rejected_enviar_with_cufe_does_not_mark_sent_and_can_retry(self):
         invoice = self._create_dgi_invoice(partner=self.partner_contribuyente)

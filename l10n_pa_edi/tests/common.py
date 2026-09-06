@@ -12,6 +12,7 @@ from odoo.tools import file_open
 LIST_ITEM_TAGS = {
     "listaItems": "item",
     "listaFormaPago": "formaPago",
+    "listaPagoPlazo": "pagoPlazo",
     "listaDocsFiscalReferenciados": "docFiscalReferenciado",
 }
 

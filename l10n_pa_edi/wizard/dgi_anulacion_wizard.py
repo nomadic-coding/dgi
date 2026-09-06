@@ -110,6 +110,10 @@ class DgiAnulacionWizard(models.TransientModel):
                 )
             )
 
+        window_error = move._dgi_anulacion_window_error()
+        if window_error:
+            raise UserError(window_error)
+
         if not self.motivo_anulacion:
             raise UserError(_("Please provide a cancellation reason."))
 

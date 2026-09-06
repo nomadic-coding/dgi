@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from odoo.exceptions import ValidationError
+from odoo.exceptions import UserError, ValidationError
 from odoo.tests import tagged
 
 from .common import L10nPaEdiTestCommon
@@ -67,14 +67,41 @@ class TestL10nPaEdiHkaCombinations(L10nPaEdiTestCommon):
         self.assertEqual(invoice.hka_tipo_operacion, "1")
         self.assertEqual(invoice.hka_allowed_document_types, "03,08,10")
 
-    def test_cafe_no_generation_only_pairs_with_no_delivery(self):
+    def test_cafe_format_and_delivery_are_independent(self):
         invoice = self._create_dgi_invoice(post=False)
-        invoice.hka_formato_cafe = "2"
-        self.assertEqual(invoice.hka_entrega_cafe, "2")
-        invoice.hka_entrega_cafe = "1"
-        self.assertEqual(invoice.hka_entrega_cafe, "2")
         invoice.hka_formato_cafe = "1"
+        invoice.hka_entrega_cafe = "2"
+        self.assertEqual(invoice.hka_formato_cafe, "1")
+        self.assertEqual(invoice.hka_entrega_cafe, "2")
+        invoice.hka_formato_cafe = "2"
+        invoice.hka_entrega_cafe = "1"
+        self.assertEqual(invoice.hka_formato_cafe, "2")
         self.assertEqual(invoice.hka_entrega_cafe, "1")
+        invoice.hka_formato_cafe = "3"
+        invoice.hka_entrega_cafe = "3"
+        self.assertEqual(invoice.hka_formato_cafe, "3")
+        self.assertEqual(invoice.hka_entrega_cafe, "3")
+        self.assertEqual(invoice.hka_allowed_entrega_cafe, "1,2,3")
+
+    def test_posterior_emission_snaps_to_prior(self):
+        invoice = self._create_dgi_invoice(post=False)
+        invoice.hka_tipo_emision = "03"
+        self.assertEqual(invoice.hka_tipo_emision, "01")
+        invoice.hka_tipo_emision = "04"
+        self.assertEqual(invoice.hka_tipo_emision, "01")
+        consumidor = self._create_dgi_invoice(
+            partner=self.partner_consumidor_final, post=False
+        )
+        consumidor.hka_tipo_emision = "03"
+        self.assertEqual(consumidor.hka_tipo_emision, "01")
+
+    def test_sent_invoice_locks_dgi_tab(self):
+        invoice = self._create_dgi_invoice()
+        self._mark_dgi_sent(invoice)
+        with self.assertRaises(UserError):
+            invoice.hka_forma_pago = "02"
+        with self.assertRaises(UserError):
+            invoice.hka_tipo_emision = "02"
 
     def test_contingency_emission_requires_reason(self):
         invoice = self._create_dgi_invoice(post=False)

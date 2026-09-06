@@ -104,6 +104,9 @@ class AccountEdiFormat(models.Model):
                 ),
                 "blocking_level": "error",
             }
+        window_error = move._dgi_anulacion_window_error()
+        if window_error:
+            return {"error": window_error, "blocking_level": "error"}
 
         anulacion_data = {
             "motivoAnulacion": motivo,

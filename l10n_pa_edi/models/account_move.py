@@ -1,13 +1,18 @@
 # -*- coding: utf-8 -*-
 
+from datetime import datetime, time, timedelta, timezone
+
 from odoo import _, api, fields, models
-from odoo.exceptions import ValidationError
+from odoo.exceptions import UserError, ValidationError
 
 from odoo.addons.l10n_pa_edi.models.hka_combinations import (
+    HKA_ANULACION_MAX_HOURS,
     HKA_CONTINGENCY_EMISSION,
     HKA_DESTINO_BY_DOCUMENT,
+    HKA_DGI_TAB_FIELDS,
     HKA_MOTIVO_CONTINGENCIA_MIN,
     HKA_NATURALEZA_BY_DOCUMENT,
+    HKA_POSTERIOR_EMISSION,
     HKA_TIPO_OPERACION_BY_DOCUMENT,
     HKA_COMBO_WRITE_FIELDS,
     HKA_TIPO_VENTA_DOCUMENTS,
@@ -15,6 +20,8 @@ from odoo.addons.l10n_pa_edi.models.hka_combinations import (
     allowed_entrega_cafe,
     default_destino,
 )
+
+_PANAMA_TZ = timezone(timedelta(hours=-5))
 
 
 class AccountMove(models.Model):
@@ -35,8 +42,6 @@ class AccountMove(models.Model):
         [
             ("01", "01 - Prior Authorization, Normal"),
             ("02", "02 - Prior Authorization, Contingency"),
-            ("03", "03 - Post Authorization, Normal"),
-            ("04", "04 - Post Authorization, Contingency"),
         ],
         string="Emission Type",
         default="01",
@@ -73,11 +78,12 @@ class AccountMove(models.Model):
         "partner_id",
         "partner_id.country_id",
         "reversed_entry_id",
+        "dgi_sent",
     )
     def _compute_hka_tipo_documento(self):
         """Compute document type from invoice type and receiver country."""
         for record in self:
-            if record.hka_tipo_documento_manual:
+            if record.dgi_sent or record.hka_tipo_documento_manual:
                 continue
             if record.move_type == "out_invoice":
                 country_code = record.partner_id.country_id.code if record.partner_id.country_id else "PA"
@@ -207,12 +213,12 @@ class AccountMove(models.Model):
 
     hka_fecha_inicio_contingencia = fields.Datetime(
         string="Contingency Start",
-        help="Required when Emission Type is 02 or 04 (HKA fechaInicioContingencia).",
+        help="Required when Emission Type is 02 (HKA fechaInicioContingencia).",
     )
 
     hka_motivo_contingencia = fields.Char(
         string="Contingency Reason",
-        help="Required when Emission Type is 02 or 04. Minimum 15 characters.",
+        help="Required when Emission Type is 02. Minimum 15 characters.",
     )
 
     hka_allowed_document_types = fields.Char(
@@ -390,10 +396,11 @@ class AccountMove(models.Model):
                 vals["hka_tipo_venta"] = "1"
         elif self.hka_tipo_venta:
             vals["hka_tipo_venta"] = False
-        entregas = allowed_entrega_cafe(self.hka_formato_cafe)
-        if entregas and self.hka_entrega_cafe not in entregas:
-            vals["hka_entrega_cafe"] = entregas[0]
-        if self.hka_tipo_emision not in HKA_CONTINGENCY_EMISSION:
+        tipo_emision = self.hka_tipo_emision
+        if tipo_emision in HKA_POSTERIOR_EMISSION:
+            tipo_emision = "01"
+            vals["hka_tipo_emision"] = "01"
+        if tipo_emision not in HKA_CONTINGENCY_EMISSION:
             if self.hka_fecha_inicio_contingencia:
                 vals["hka_fecha_inicio_contingencia"] = False
             if self.hka_motivo_contingencia:
@@ -455,6 +462,8 @@ class AccountMove(models.Model):
             vals = {key: value for key, value in vals.items() if key not in self._DGI_API_FIELDS}
             if not vals:
                 return True
+        if (HKA_DGI_TAB_FIELDS & set(vals)) and self.filtered("dgi_sent"):
+            raise UserError(_("DGI settings cannot be changed after the invoice is sent."))
         if not (HKA_COMBO_WRITE_FIELDS & set(vals)):
             return super().write(vals)
         if len(self) > 1:
@@ -463,7 +472,14 @@ class AccountMove(models.Model):
             return True
         preview = self._hka_preview_combo_record(vals)
         vals = dict(vals)
-        vals.update(preview._hka_compatible_operation_vals())
+        combo_vals = preview._hka_compatible_operation_vals()
+        if self.dgi_sent:
+            combo_vals = {
+                key: value
+                for key, value in combo_vals.items()
+                if key not in HKA_DGI_TAB_FIELDS
+            }
+        vals.update(combo_vals)
         return super().write(vals)
 
     @api.constrains(
@@ -527,23 +543,21 @@ class AccountMove(models.Model):
             errors.append(_("Sale Type is required for sales documents."))
         if tipo not in HKA_TIPO_VENTA_DOCUMENTS and self.hka_tipo_venta:
             errors.append(_("Sale Type must be empty when the document is not a sale."))
-        entregas = allowed_entrega_cafe(self.hka_formato_cafe)
-        if entregas and self.hka_entrega_cafe not in entregas:
+        if self.hka_tipo_emision in HKA_POSTERIOR_EMISSION:
             errors.append(
-                _("CAFE Delivery %(delivery)s is not valid for CAFE Format %(fmt)s.")
-                % {"delivery": self.hka_entrega_cafe, "fmt": self.hka_formato_cafe}
+                _("Emission Type 03/04 (post authorization) is not supported.")
             )
         if self.hka_tipo_emision in HKA_CONTINGENCY_EMISSION:
             if not self.hka_fecha_inicio_contingencia:
                 errors.append(
-                    _("Contingency Start is required when Emission Type is 02 or 04.")
+                    _("Contingency Start is required when Emission Type is 02.")
                 )
             motivo = (self.hka_motivo_contingencia or "").strip()
             if len(motivo) < HKA_MOTIVO_CONTINGENCIA_MIN:
                 errors.append(
                     _(
                         "Contingency Reason must be at least %(min)s characters "
-                        "when Emission Type is 02 or 04."
+                        "when Emission Type is 02."
                     )
                     % {"min": HKA_MOTIVO_CONTINGENCIA_MIN}
                 )
@@ -574,9 +588,8 @@ class AccountMove(models.Model):
         """Write DGI response fields on this cursor.
 
         A second connection must not UPDATE this invoice while Enviar still
-        holds the EDI / HKA-log locks; that deadlocks Process now. If the
-        current transaction later rolls back after HKA already accepted the
-        document, a retry gets code 102 with the CUFE and is treated as sent.
+        holds the EDI / HKA-log locks; that deadlocks Process now. HKA 102
+        (duplicate) is an error: do not store the CUFE or mark the invoice sent.
         """
         self.ensure_one()
         self._dgi_write_api_fields(vals)
@@ -584,6 +597,30 @@ class AccountMove(models.Model):
     def _is_dgi_anulado(self):
         """Check if invoice is canceled in DGI"""
         return self.dgi_status == "anulado"
+
+    def _dgi_emission_datetime_panama(self):
+        """Emission timestamp sent to HKA: invoice date at 00:00 Panama time."""
+        self.ensure_one()
+        if not self.invoice_date:
+            return False
+        return datetime.combine(self.invoice_date, time.min, tzinfo=_PANAMA_TZ)
+
+    def _dgi_anulacion_window_error(self):
+        """DGI CA06: anulación more than 182 hours after dFechaEm is rejected."""
+        self.ensure_one()
+        emitted = self._dgi_emission_datetime_panama()
+        if not emitted:
+            return _("Invoice date is required to cancel this invoice in DGI.")
+        deadline = emitted + timedelta(hours=HKA_ANULACION_MAX_HOURS)
+        if datetime.now(_PANAMA_TZ) > deadline:
+            return _(
+                "DGI does not allow cancellation more than %(hours)s hours after "
+                "the invoice date (%(date)s)."
+            ) % {
+                "hours": HKA_ANULACION_MAX_HOURS,
+                "date": self.invoice_date,
+            }
+        return False
 
     @api.depends("dgi_status")
     def _compute_show_reset_to_draft_button(self):

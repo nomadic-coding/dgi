@@ -2,6 +2,7 @@
 
 from unittest.mock import patch
 
+from odoo import fields
 from odoo.exceptions import UserError
 from odoo.tests import tagged
 
@@ -10,8 +11,11 @@ from .common import L10nPaEdiTestCommon
 
 @tagged("post_install_l10n", "post_install", "-at_install")
 class TestL10nPaEdiAnulacion(L10nPaEdiTestCommon):
-    def _sent_invoice(self):
-        invoice = self._create_dgi_invoice(partner=self.partner_contribuyente)
+    def _sent_invoice(self, invoice_date=None):
+        invoice = self._create_dgi_invoice(
+            partner=self.partner_contribuyente,
+            invoice_date=invoice_date or fields.Date.today(),
+        )
         self._mark_dgi_sent(invoice, dgi_cufe="TEST-CUFE-ANULAR")
         return invoice
 
@@ -97,3 +101,12 @@ class TestL10nPaEdiAnulacion(L10nPaEdiTestCommon):
             invoice.button_force_cancel()
         self.assertIn("processed in DGI", str(error.exception))
         self.assertEqual(invoice.state, "posted")
+
+    def test_anular_rejected_after_182_hours(self):
+        invoice = self._sent_invoice(invoice_date="2026-03-15")
+        wizard = self._wizard(invoice)
+        with self.assertRaises(UserError) as error:
+            wizard.action_anular()
+        self.assertIn("182", str(error.exception))
+        self.assertEqual(invoice.state, "posted")
+        self.assertEqual(invoice.dgi_status, "procesado")

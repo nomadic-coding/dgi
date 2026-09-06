@@ -138,6 +138,41 @@ class TestL10nPaEdiInvoiceXml(L10nPaEdiTestCommon):
         self.assertEqual(refund.hka_tipo_documento, "06")
         refund._validate_before_send_to_dgi()
 
+    def test_generic_credit_note_omits_origin_cufe(self):
+        invoice = self._create_dgi_invoice(partner=self.partner_contribuyente)
+        self._mark_dgi_sent(invoice, dgi_cufe="A" * 66)
+        refund = self._create_dgi_invoice(
+            partner=self.partner_contribuyente,
+            move_type="out_refund",
+            reversed_entry=invoice,
+        )
+        refund.write({
+            "hka_tipo_documento_manual": True,
+            "hka_tipo_documento": "06",
+        })
+        self.assertEqual(refund.hka_tipo_documento, "06")
+        payload = refund._prepare_dgi_document_data()["documento"]["datosTransaccion"]
+        self.assertNotIn("listaDocsFiscalReferenciados", payload)
+        refund._validate_before_send_to_dgi()
+
+    def test_credit_note_larger_than_origin_is_rejected(self):
+        invoice = self._create_dgi_invoice(partner=self.partner_contribuyente)
+        self._mark_dgi_sent(invoice, dgi_cufe="A" * 66)
+        refund = self._create_dgi_invoice(
+            partner=self.partner_contribuyente,
+            move_type="out_refund",
+            reversed_entry=invoice,
+            line_vals=[
+                {
+                    **self._default_invoice_line_vals(),
+                    "price_unit": 2000.0,
+                }
+            ],
+        )
+        with self.assertRaises(UserError) as error:
+            refund._validate_before_send_to_dgi()
+        self.assertIn("exceeds", error.exception.args[0])
+
     def test_send_to_dgi_writes_response_fields(self):
         invoice = self._create_dgi_invoice(partner=self.partner_contribuyente)
         result = {
@@ -206,14 +241,49 @@ class TestL10nPaEdiInvoiceXml(L10nPaEdiTestCommon):
     def test_credit_payment_sets_tiempo_pago(self):
         invoice = self._create_dgi_invoice(
             partner=self.partner_contribuyente,
+            extra_vals={
+                "hka_forma_pago": "01",
+                "invoice_date_due": "2026-04-15",
+            },
+        )
+        totals = invoice._prepare_dgi_document_data()["documento"]["totalesSubTotales"]
+        self.assertEqual(totals["tiempoPago"], "2")
+        self.assertEqual(totals["listaFormaPago"][0]["formaPagoFact"], "01")
+        self.assertEqual(len(totals["listaPagoPlazo"]), 1)
+        self.assertEqual(totals["listaPagoPlazo"][0]["valorCuota"], "1070.00")
+        self.assertTrue(totals["listaPagoPlazo"][0]["fechaVenceCuota"].startswith("2026-04-15"))
+        self.assertGreaterEqual(len(totals["listaPagoPlazo"][0]["infoPagoCuota"]), 15)
+        self.assertLess(len(totals["listaPagoPlazo"][0]["infoPagoCuota"]), 80)
+        self.assertNotIn("\n", totals["listaPagoPlazo"][0]["infoPagoCuota"])
+        invoice._validate_before_send_to_dgi()
+
+    def test_info_pago_cuota_uses_partner_lang(self):
+        payload = self.env["l10n.pa.edi.payload"]
+        invoice = self._create_dgi_invoice(post=False)
+        invoice.partner_id.lang = "en_US"
+        self.assertEqual(payload._hka_cafe_lang(invoice), "en_US")
+        self.assertEqual(payload._hka_info_pago_cuota(invoice), "Due-date installment.")
+        spanish = self.env["res.lang"].search([
+            ("code", "in", ("es_PA", "es_ES", "es")),
+            ("active", "=", True),
+        ], limit=1)
+        if spanish:
+            invoice.partner_id.lang = spanish.code
+            self.assertEqual(payload._hka_cafe_lang(invoice), spanish.code)
+            self.assertEqual(
+                payload._hka_info_pago_cuota(invoice),
+                "Cuota a fecha de vencimiento.",
+            )
+
+    def test_credit_payment_requires_due_date(self):
+        invoice = self._create_dgi_invoice(
+            partner=self.partner_contribuyente,
             extra_vals={"hka_forma_pago": "01"},
         )
-        payload = invoice._prepare_dgi_document_data()
-        self.assertEqual(payload["documento"]["totalesSubTotales"]["tiempoPago"], "2")
-        self.assertEqual(
-            payload["documento"]["totalesSubTotales"]["listaFormaPago"][0]["formaPagoFact"],
-            "01",
-        )
+        invoice.invoice_date_due = False
+        with self.assertRaises(UserError) as error:
+            invoice._validate_before_send_to_dgi()
+        self.assertIn("due date", error.exception.args[0])
 
     def test_sale_downpayment_is_deducted_in_hka_payload(self):
         """Final invoice after a down payment must send the net remainder, not the gross sale."""
