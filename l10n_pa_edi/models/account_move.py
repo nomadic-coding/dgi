@@ -235,9 +235,11 @@ class AccountMove(models.Model):
         compute="_compute_hka_allowed_combinations"
     )
 
+    # Static default: reading env.company here runs during _auto_init, before
+    # res_company.hka_merge_same_dgi_code exists. create() copies the company.
     hka_merge_same_dgi_code = fields.Boolean(
         string="Merge Same DGI Code Lines",
-        default=lambda self: self.env.company.hka_merge_same_dgi_code,
+        default=True,
         help="Group e-factura lines that share the same DGI product/service code "
         "(and the same ITBMS/ISC) into one line sent as quantity 1 with the "
         "net total as unit price. Defaults from the company setting.",
