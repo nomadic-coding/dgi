@@ -42,7 +42,8 @@ class ResCompany(models.Model):
         string="Merge Same DGI Code Lines",
         default=True,
         help="Default for new invoices: group e-factura lines that share the "
-        "same DGI product/service code (and the same ITBMS/ISC) into one line.",
+        "same DGI product/service code (and the same ITBMS/ISC) into one line "
+        "sent as quantity 1 with the net total as unit price.",
     )
     hka_auth_token = fields.Char(
         string="HKA Auth Token",

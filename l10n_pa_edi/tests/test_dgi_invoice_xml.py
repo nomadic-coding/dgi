@@ -26,6 +26,70 @@ class TestL10nPaEdiInvoiceXml(L10nPaEdiTestCommon):
 
         self._assert_documento_xml_equal(invoice, "invoice_contribuyente.xml")
 
+    def test_zero_tax_invoice_matches_xml(self):
+        invoice = self._create_dgi_invoice(
+            partner=self.partner_contribuyente,
+            line_vals=[self._zero_rate_invoice_line_vals()],
+        )
+        self.assertEqual(invoice.state, "posted")
+        self.assertAlmostEqual(invoice.amount_untaxed, 1000.0)
+        self.assertAlmostEqual(invoice.amount_tax, 0.0)
+        self.assertAlmostEqual(invoice.amount_total, 1000.0)
+        payload = invoice._prepare_dgi_document_data()
+        item = payload["documento"]["listaItems"][0]
+        self.assertEqual(item["tasaITBMS"], "00")
+        self.assertEqual(item["valorITBMS"], "0.00")
+        self.assertEqual(item["valorTotal"], "1000.00")
+        self._assert_hka_payload_matches_move(invoice, payload)
+        self._assert_documento_xml_equal(invoice, "invoice_zero_tax.xml")
+
+    def test_cannot_post_dgi_invoice_without_line_tax(self):
+        invoice = self._create_dgi_invoice(
+            post=False,
+            line_vals=[{
+                **self._default_invoice_line_vals(),
+                "tax_ids": [Command.set([])],
+            }],
+        )
+        with self.assertRaises(UserError) as error:
+            invoice.action_post()
+        self.assertIn("tax", error.exception.args[0].lower())
+        self.assertEqual(invoice.state, "draft")
+
+    def test_non_dgi_journal_can_post_without_line_tax(self):
+        self.sale_journal.use_dgi_electronic_invoicing = False
+        invoice = self._create_dgi_invoice(
+            post=False,
+            line_vals=[{
+                **self._default_invoice_line_vals(),
+                "tax_ids": [Command.set([])],
+            }],
+        )
+        invoice.action_post()
+        self.assertEqual(invoice.state, "posted")
+
+    def test_cannot_post_dgi_invoice_with_unmapped_tax(self):
+        unmapped = self._copy_itbms_tax("Unmapped ITBMS", 7.0, False)
+        invoice = self._create_dgi_invoice(
+            post=False,
+            line_vals=[self._invoice_line_vals_for_tax(unmapped)],
+        )
+        with self.assertRaises(UserError) as error:
+            invoice.action_post()
+        self.assertIn("HKA tax code", error.exception.args[0])
+        self.assertEqual(invoice.state, "draft")
+
+    def test_cannot_post_dgi_invoice_with_hka_rate_mismatch(self):
+        mismatched = self._copy_itbms_tax("ITBMS 10% labeled 01", 10.0, "01")
+        invoice = self._create_dgi_invoice(
+            post=False,
+            line_vals=[self._invoice_line_vals_for_tax(mismatched)],
+        )
+        with self.assertRaises(UserError) as error:
+            invoice.action_post()
+        self.assertIn("HKA code 01", error.exception.args[0])
+        self.assertEqual(invoice.state, "draft")
+
     def test_consumidor_final_invoice_matches_xml(self):
         invoice = self._create_dgi_invoice(partner=self.partner_consumidor_final)
 
@@ -48,6 +112,31 @@ class TestL10nPaEdiInvoiceXml(L10nPaEdiTestCommon):
         self.assertNotEqual(credit_note.name, "/")
         self.assertNotEqual(credit_note.name, invoice.name)
         self._assert_documento_xml_equal(credit_note, "credit_note_contribuyente.xml")
+
+    def test_credit_note_send_requires_66_char_referenced_cufe(self):
+        invoice = self._create_dgi_invoice(partner=self.partner_contribuyente)
+        self._mark_dgi_sent(invoice, dgi_cufe="TEST-CUFE-001")
+        credit_note = self._create_dgi_invoice(
+            partner=self.partner_contribuyente,
+            invoice_date="2026-03-20",
+            move_type="out_refund",
+            reversed_entry=invoice,
+        )
+        with self.assertRaises(UserError) as error:
+            credit_note._validate_before_send_to_dgi()
+        self.assertIn("66", error.exception.args[0])
+
+        self._mark_dgi_sent(invoice, dgi_cufe="A" * 66)
+        credit_note.invalidate_recordset()
+        credit_note._validate_before_send_to_dgi()
+
+    def test_generic_credit_note_send_does_not_require_referenced_cufe(self):
+        refund = self._create_dgi_invoice(
+            partner=self.partner_contribuyente,
+            move_type="out_refund",
+        )
+        self.assertEqual(refund.hka_tipo_documento, "06")
+        refund._validate_before_send_to_dgi()
 
     def test_send_to_dgi_writes_response_fields(self):
         invoice = self._create_dgi_invoice(partner=self.partner_contribuyente)
@@ -202,11 +291,62 @@ class TestL10nPaEdiInvoiceXml(L10nPaEdiTestCommon):
         payload = invoice._prepare_dgi_document_data()
         items = payload["documento"]["listaItems"]
         self.assertEqual(len(items), 1)
-        self.assertEqual(items[0]["cantidad"], "10.00")
+        self.assertEqual(items[0]["cantidad"], "1.00")
+        self.assertEqual(items[0]["precioUnitario"], "1000.00")
         self.assertEqual(items[0]["precioItem"], "1000.00")
         self.assertEqual(items[0]["valorITBMS"], "70.00")
         self.assertEqual(items[0]["valorTotal"], "1070.00")
         self.assertEqual(payload["documento"]["totalesSubTotales"]["nroItems"], "1")
+
+    def test_zero_tax_same_dgi_code_lines_are_merged(self):
+        invoice = self._create_dgi_invoice(
+            partner=self.partner_contribuyente,
+            line_vals=[
+                self._zero_rate_invoice_line_vals(
+                    name="Exempt A", quantity=2, price_unit=1000.0
+                ),
+                self._zero_rate_invoice_line_vals(
+                    name="Exempt B", quantity=3, price_unit=1000.0
+                ),
+            ],
+        )
+        payload = invoice._prepare_dgi_document_data()
+        items = payload["documento"]["listaItems"]
+        self.assertAlmostEqual(invoice.amount_untaxed, 5000.0)
+        self.assertAlmostEqual(invoice.amount_total, 5000.0)
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0]["cantidad"], "1.00")
+        self.assertEqual(items[0]["precioUnitario"], "5000.00")
+        self.assertEqual(items[0]["precioItem"], "5000.00")
+        self.assertEqual(items[0]["tasaITBMS"], "00")
+        self.assertEqual(items[0]["valorITBMS"], "0.00")
+        self.assertEqual(items[0]["valorTotal"], "5000.00")
+        self._assert_hka_payload_matches_move(invoice, payload)
+
+    def test_zero_and_seven_percent_same_code_are_not_merged(self):
+        invoice = self._create_dgi_invoice(
+            partner=self.partner_contribuyente,
+            line_vals=[
+                self._zero_rate_invoice_line_vals(name="Exempt consulting"),
+                self._default_invoice_line_vals(),
+            ],
+        )
+        payload = invoice._prepare_dgi_document_data()
+        items = payload["documento"]["listaItems"]
+        self.assertEqual(len(items), 2)
+        self.assertAlmostEqual(invoice.amount_untaxed, 2000.0)
+        self.assertAlmostEqual(invoice.amount_tax, 70.0)
+        self.assertAlmostEqual(invoice.amount_total, 2070.0)
+        tasas = {item["tasaITBMS"] for item in items}
+        self.assertEqual(tasas, {"00", "01"})
+        by_tasa = {item["tasaITBMS"]: item for item in items}
+        self.assertEqual(by_tasa["00"]["valorITBMS"], "0.00")
+        self.assertEqual(by_tasa["00"]["valorTotal"], "1000.00")
+        self.assertEqual(by_tasa["01"]["valorITBMS"], "70.00")
+        self.assertEqual(by_tasa["01"]["valorTotal"], "1070.00")
+        self.assertEqual(payload["documento"]["totalesSubTotales"]["totalITBMS"], "70.00")
+        self.assertEqual(payload["documento"]["totalesSubTotales"]["totalFactura"], "2070.00")
+        self._assert_hka_payload_matches_move(invoice, payload)
 
     def test_different_dgi_codes_are_not_merged(self):
         other = self._create_product(
@@ -298,3 +438,17 @@ class TestL10nPaEdiInvoiceXml(L10nPaEdiTestCommon):
 
         with self.assertRaises(UserError):
             invoice.action_send_to_dgi()
+
+    def test_payload_fails_when_line_tax_has_no_hka_code(self):
+        tax = self._copy_itbms_tax("ITBMS unmapped", 7.0, False)
+        invoice = self._create_dgi_invoice(
+            partner=self.partner_contribuyente,
+            post=False,
+            line_vals=[{
+                **self._default_invoice_line_vals(),
+                "tax_ids": [Command.set(tax.ids)],
+            }],
+        )
+        with self.assertRaises(UserError) as error:
+            invoice._prepare_dgi_document_data()
+        self.assertRegex(error.exception.args[0], r"HKA|tax code|mapping")

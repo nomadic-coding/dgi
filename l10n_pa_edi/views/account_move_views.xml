@@ -4,6 +4,7 @@
         <field name="name">account.move.form.dgi</field>
         <field name="model">account.move</field>
         <field name="inherit_id" ref="account.view_move_form" />
+        <field name="priority">20</field>
         <field name="arch" type="xml">
             <!-- Make form readonly when canceled in DGI -->
             <xpath expr="//form" position="attributes">
@@ -16,6 +17,11 @@
                         help="Download the electronic invoice PDF from DGI" />
                 <button name="action_download_efactura_xml" string="Download XML" type="object" class="btn-secondary"
                         invisible="dgi_status != 'procesado'" help="Download the electronic invoice XML from DGI" />
+            </xpath>
+
+            <!-- Use standard Request Cancel; HKA motivo is collected there. -->
+            <xpath expr="//button[@name='button_cancel_posted_moves']" position="attributes">
+                <attribute name="invisible">1</attribute>
             </xpath>
 
             <!-- Hide credit note button when invoice is sent to DGI -->

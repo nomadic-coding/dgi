@@ -61,19 +61,13 @@ class AccountEdiFormat(models.Model):
         except UserError as err:
             return {"error": str(err), "blocking_level": "error"}
         if result.get("success"):
-            attachment = self.env["ir.attachment"].create({
-                "name": "%s_hka.json" % (move.name or move.id),
-                "raw": json.dumps(document_data, ensure_ascii=False).encode(),
-                "mimetype": "application/json",
-                "res_model": move._name,
-                "res_id": move.id,
-            })
-            move.message_post(
-                body=_("Document sent to DGI successfully. CUFE: %s")
-                % (result.get("dgi_cufe") or _("Pending")),
-                message_type="notification",
+            success_message = _("Document sent to DGI successfully. CUFE: %s") % (
+                result.get("dgi_cufe") or _("Pending")
             )
-            return {"success": True, "attachment": attachment}
+            move.message_post(body=success_message, message_type="notification")
+            # Do not attach the HKA Enviar JSON: account.edi would put it on
+            # the customer invoice email. The payload is already in hka.api.log.
+            return {"success": True}
 
         error_message = (
             result.get("error_message")

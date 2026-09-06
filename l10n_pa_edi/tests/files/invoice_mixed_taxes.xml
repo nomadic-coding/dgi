@@ -34,30 +34,41 @@
     </datosTransaccion>
     <listaItems>
       <item>
-        <descripcion>Consulting A&#8232;Consulting B</descripcion>
+        <descripcion>Consulting 7%</descripcion>
         <cantidad>1.00</cantidad>
-        <precioUnitario>5000.00</precioUnitario>
-        <precioItem>5000.00</precioItem>
-        <valorTotal>5350.00</valorTotal>
+        <precioUnitario>1000.00</precioUnitario>
+        <precioItem>1000.00</precioItem>
+        <valorTotal>1070.00</valorTotal>
         <codigo>SVC-001</codigo>
         <unidadMedida>und</unidadMedida>
         <tasaITBMS>01</tasaITBMS>
-        <valorITBMS>350.00</valorITBMS>
+        <valorITBMS>70.00</valorITBMS>
+      </item>
+      <item>
+        <descripcion>Consulting 10%</descripcion>
+        <cantidad>1.00</cantidad>
+        <precioUnitario>1000.00</precioUnitario>
+        <precioItem>1000.00</precioItem>
+        <valorTotal>1100.00</valorTotal>
+        <codigo>SVC-001</codigo>
+        <unidadMedida>und</unidadMedida>
+        <tasaITBMS>02</tasaITBMS>
+        <valorITBMS>100.00</valorITBMS>
       </item>
     </listaItems>
     <totalesSubTotales>
-      <totalPrecioNeto>5000.00</totalPrecioNeto>
-      <totalITBMS>350.00</totalITBMS>
-      <totalMontoGravado>350.00</totalMontoGravado>
-      <totalFactura>5350.00</totalFactura>
-      <totalValorRecibido>5350.00</totalValorRecibido>
-      <totalTodosItems>5350.00</totalTodosItems>
+      <totalPrecioNeto>2000.00</totalPrecioNeto>
+      <totalITBMS>170.00</totalITBMS>
+      <totalMontoGravado>170.00</totalMontoGravado>
+      <totalFactura>2170.00</totalFactura>
+      <totalValorRecibido>2170.00</totalValorRecibido>
+      <totalTodosItems>2170.00</totalTodosItems>
       <tiempoPago>1</tiempoPago>
-      <nroItems>1</nroItems>
+      <nroItems>2</nroItems>
       <listaFormaPago>
         <formaPago>
           <formaPagoFact>08</formaPagoFact>
-          <valorCuotaPagada>5350.00</valorCuotaPagada>
+          <valorCuotaPagada>2170.00</valorCuotaPagada>
         </formaPago>
       </listaFormaPago>
     </totalesSubTotales>

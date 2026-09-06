@@ -49,12 +49,30 @@ class TestL10nPaEdiFormat(L10nPaEdiTestCommon):
         self.assertEqual(invoice.state, "posted")
         self.assertEqual(invoice.dgi_status, "procesado")
 
-    def test_button_cancel_posted_moves_opens_wizard(self):
+    def test_descargar_file_name_is_not_double_extension(self):
+        api = self.env["l10n_pa_edi.hka_api"]
+        self.assertEqual(api._descargar_file_name("0000000303", "PDF"), "0000000303.pdf")
+        self.assertEqual(api._descargar_file_name("0000000303", "XML"), "0000000303.xml")
+        self.assertEqual(api._descargar_file_name("0000000303", "pdf"), "0000000303.pdf")
+
+    def test_button_request_cancel_opens_wizard(self):
         invoice = self._create_dgi_invoice(partner=self.partner_contribuyente)
         self._mark_dgi_sent(invoice, dgi_cufe="TEST-CUFE-EDI-CANCEL")
-        action = invoice.button_cancel_posted_moves()
+        self.assertTrue(invoice.need_cancel_request)
+        action = invoice.button_request_cancel()
         self.assertEqual(action["res_model"], "dgi.anulacion.wizard")
         self.assertEqual(action["context"]["active_id"], invoice.id)
+
+    def test_request_edi_cancellation_button_is_hidden(self):
+        from lxml import etree
+
+        arch = etree.fromstring(self.env.ref("l10n_pa_edi.view_move_form_dgi").arch_db)
+        hidden = arch.xpath(
+            "//xpath[contains(@expr, 'button_cancel_posted_moves')]"
+            "/attribute[@name='invisible']"
+        )
+        self.assertTrue(hidden)
+        self.assertEqual((hidden[0].text or "").strip(), "1")
 
 
 @tagged("post_install_l10n", "post_install", "-at_install")

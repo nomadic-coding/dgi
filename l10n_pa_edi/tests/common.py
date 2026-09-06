@@ -103,6 +103,19 @@ class L10nPaEdiTestCommon(AccountTestInvoicingCommon):
     def _configure_sale_tax(cls):
         cls.tax_itbms_7 = cls.company_data["default_tax_sale"]
         cls.tax_itbms_7.hka_tax_code = "01"
+        cls.tax_itbms_0 = cls._copy_itbms_tax("ITBMS 0% (Exento)", 0.0, "00")
+        cls.tax_itbms_10 = cls._copy_itbms_tax("ITBMS 10%", 10.0, "02")
+        cls.tax_itbms_15 = cls._copy_itbms_tax("ITBMS 15%", 15.0, "03")
+
+    @classmethod
+    def _copy_itbms_tax(cls, name, amount, hka_code):
+        group = cls.tax_itbms_7.tax_group_id.copy({"name": name})
+        return cls.tax_itbms_7.copy({
+            "name": name,
+            "amount": amount,
+            "hka_tax_code": hka_code,
+            "tax_group_id": group.id,
+        })
 
     @classmethod
     def _panama_address_vals(cls):
@@ -238,6 +251,17 @@ class L10nPaEdiTestCommon(AccountTestInvoicingCommon):
             "price_unit": 1000.0,
             "tax_ids": [Command.set(cls.tax_itbms_7.ids)],
         }
+
+    @classmethod
+    def _invoice_line_vals_for_tax(cls, tax, **overrides):
+        vals = cls._default_invoice_line_vals()
+        vals["tax_ids"] = [Command.set(tax.ids)]
+        vals.update(overrides)
+        return vals
+
+    @classmethod
+    def _zero_rate_invoice_line_vals(cls, **overrides):
+        return cls._invoice_line_vals_for_tax(cls.tax_itbms_0, **overrides)
 
     def _create_sale_final_invoice_with_downpayment(
         self,

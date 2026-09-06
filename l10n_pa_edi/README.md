@@ -30,7 +30,7 @@ Go to **Settings > General Settings > Panama Electronic Invoicing** and configur
 - **HKA Clave**: Your HKA API password
 - **API Timeout**: Request timeout in seconds (default: 30)
 - **Verify SSL**: Enable/disable SSL verification
-- **Merge Same DGI Code Lines**: Default for new invoices; group e-factura lines that share the same DGI product/service code. Override on each invoice's Electronic Invoice (DGI) tab.
+- **Merge Same DGI Code Lines**: Default for new invoices; group e-factura lines that share the same DGI product/service code into one line sent as quantity 1 with the net total as unit price. Override on each invoice's Electronic Invoice (DGI) tab.
 - **Sale Type (`tipoVenta`)**: Required on customer invoices (giro, asset, real estate, or service). Not sent on credit notes.
 
 Posted DGI invoices use Odoo's `account.edi` format **Panama DGI (HKA)**. Sending is queued on post and processed by **Process now** or the electronic invoicing cron.
@@ -78,18 +78,21 @@ Go to **Accounting > Configuration > Journals** and set:
 ### Models
 
 - `l10n_pa_edi.hka_api`: HKA API client (abstract model)
+- `l10n.pa.edi.payload`: HKA Enviar payload builder (abstract model)
 - `res.partner`: Extended with DGI fields and RUC validation
 - `account.journal`: Extended with branch code
-- `account.move`: Extended with electronic invoice fields and sending logic
+- `account.move`: Fiscal identity (CUFE/QR/status) and combination fields
+- `account.edi.document`: Send/cancel queue for format `pa_dgi_hka`
 
 ### Key Methods
 
 - `hka_api.validate_ruc(ruc, tipo_ruc)`: Validate RUC with DGI
 - `hka_api.enviar(document_data)`: Send document to DGI
+- `l10n.pa.edi.payload.prepare(move)`: Build the Enviar JSON
 - `res.partner.action_validate_ruc()`: Validate partner's RUC
 - `account.edi.format` `pa_dgi_hka`: post/cancel HKA documents via the standard EDI cron
 - `account.move.action_send_to_dgi()`: Process the queued HKA EDI document now
-- `account.move._prepare_dgi_document_data()`: Prepare document for API
+- `account.move._prepare_dgi_document_data()`: Wrapper around `payload.prepare`
 
 ## Support
 

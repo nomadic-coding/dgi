@@ -200,19 +200,16 @@ class HkaApiLog(models.Model):
         # Use a new cursor to ensure the log is committed
         # even if the main transaction is rolled back
         if auto_commit:
+            # Never attach move_id on a side cursor: the FK waits on the Enviar
+            # invoice lock and Process now then reports "another process already".
+            values.pop("move_id", None)
             try:
                 with self.env.registry.cursor() as new_cr:
                     new_env = api.Environment(new_cr, self.env.uid, self.env.context)
-                    log_record = new_env["hka.api.log"].sudo().create(values)
+                    new_env["hka.api.log"].sudo().create(values)
                     new_cr.commit()
-                    _logger.debug(
-                        "API log created with auto-commit: %s", log_record.display_name
-                    )
-                    return None  # Can't return the record from a different cursor
+                    return None
             except Exception as exc:
-                # If logging fails, just log it but don't interrupt the main flow
                 _logger.error("Failed to create API log entry: %s", exc)
                 return None
-        else:
-            # Use current transaction (for cases where caller manages transaction)
-            return self.sudo().create(values)
+        return self.sudo().create(values)

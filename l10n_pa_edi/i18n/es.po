@@ -150,14 +150,14 @@ msgstr "Combinar líneas con el mismo código DGI"
 
 #. module: l10n_pa_edi
 #: model:ir.model.fields,help:l10n_pa_edi.field_account_move__hka_merge_same_dgi_code
-msgid "Group e-factura lines that share the same DGI product/service code (and the same ITBMS/ISC) into one line. Defaults from the company setting."
-msgstr "Agrupa en una sola línea de e-factura las líneas que comparten el mismo código DGI de producto/servicio (y el mismo ITBMS/ISC). El valor inicial sale de la configuración de la compañía."
+msgid "Group e-factura lines that share the same DGI product/service code (and the same ITBMS/ISC) into one line sent as quantity 1 with the net total as unit price. Defaults from the company setting."
+msgstr "Agrupa en una sola línea de e-factura las líneas que comparten el mismo código DGI de producto/servicio (y el mismo ITBMS/ISC), enviada con cantidad 1 y el total neto como precio unitario. El valor inicial sale de la configuración de la compañía."
 
 #. module: l10n_pa_edi
 #: model:ir.model.fields,help:l10n_pa_edi.field_res_company__hka_merge_same_dgi_code
 #: model:ir.model.fields,help:l10n_pa_edi.field_res_config_settings__hka_merge_same_dgi_code
-msgid "Default for new invoices: group e-factura lines that share the same DGI product/service code (and the same ITBMS/ISC) into one line."
-msgstr "Valor predeterminado para facturas nuevas: agrupa en una sola línea de e-factura las líneas que comparten el mismo código DGI de producto/servicio (y el mismo ITBMS/ISC)."
+msgid "Default for new invoices: group e-factura lines that share the same DGI product/service code (and the same ITBMS/ISC) into one line sent as quantity 1 with the net total as unit price."
+msgstr "Valor predeterminado para facturas nuevas: agrupa en una sola línea de e-factura las líneas que comparten el mismo código DGI de producto/servicio (y el mismo ITBMS/ISC), enviada con cantidad 1 y el total neto como precio unitario."
 
 #. module: l10n_pa_edi
 #: model_terms:ir.ui.view,arch_db:l10n_pa_edi.res_config_settings_view_form
@@ -166,8 +166,8 @@ msgstr "Líneas de e-factura"
 
 #. module: l10n_pa_edi
 #: model_terms:ir.ui.view,arch_db:l10n_pa_edi.res_config_settings_view_form
-msgid "Default for new invoices: send one e-factura line per DGI product/service code (same ITBMS/ISC). Can be overridden on each invoice."
-msgstr "Valor predeterminado para facturas nuevas: enviar una línea de e-factura por código DGI de producto/servicio (mismo ITBMS/ISC). Se puede cambiar en cada factura."
+msgid "Default for new invoices: send one e-factura line per DGI product/service code (same ITBMS/ISC) as quantity 1 with the net total as unit price. Can be overridden on each invoice."
+msgstr "Valor predeterminado para facturas nuevas: enviar una línea de e-factura por código DGI de producto/servicio (mismo ITBMS/ISC) con cantidad 1 y el total neto como precio unitario. Se puede cambiar en cada factura."
 
 #. module: l10n_pa_edi
 #: model:ir.model.fields,field_description:l10n_pa_edi.field_account_move__hka_desc_forma_pago
@@ -260,3 +260,69 @@ msgstr "Los contactos extranjeros solo pueden usar el tipo de RUC 04 (Entidad ex
 #: code:addons/l10n_pa_edi/models/res_partner.py:0
 msgid "Tipo RUC 04 (Foreign Entity) cannot be used for a Panama partner."
 msgstr "El tipo de RUC 04 (Entidad extranjera) no se puede usar en un contacto de Panamá."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "Tax is required on invoice line '%s'. Use a 0%% tax for exempt lines."
+msgstr "El impuesto es obligatorio en la línea de factura '%s'. Use un impuesto de 0%% para líneas exentas."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "Every product line must have a tax before confirming a DGI invoice. Use a 0%% tax for exempt lines."
+msgstr "Cada línea de producto debe tener un impuesto antes de confirmar una factura DGI. Use un impuesto de 0%% para líneas exentas."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "Tax '%s' has no HKA tax code. Map it to 00, 01, 02, 03, or 04 before confirming a DGI invoice."
+msgstr "El impuesto '%s' no tiene código HKA. Asígnelo a 00, 01, 02, 03 o 04 antes de confirmar una factura DGI."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "Tax '%(tax)s' is HKA code %(code)s (%(expected)g%%) but its Odoo rate is %(actual)g%%."
+msgstr "El impuesto '%(tax)s' es código HKA %(code)s (%(expected)g%%) pero su tasa en Odoo es %(actual)g%%."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "Tax '%s' is HKA ISC (04) but has no HKA ISC rate."
+msgstr "El impuesto '%s' es ISC HKA (04) pero no tiene tasa ISC HKA."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "Document type %s requires the original e-factura. Create this credit/debit note from the posted invoice."
+msgstr "El tipo de documento %s requiere la e-factura original. Cree esta nota de crédito/débito desde la factura publicada."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "Cannot send credit/debit note: referenced CUFE must be 66 characters (HKA cufeFEReferenciada). Current length: %s"
+msgstr "No se puede enviar la nota de crédito/débito: el CUFE referenciado debe tener 66 caracteres (HKA cufeFEReferenciada). Longitud actual: %s"
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "Cannot send credit note: Original invoice date is missing for invoice %s"
+msgstr "No se puede enviar la nota de crédito: falta la fecha de la factura original %s"
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/hka_api.py:0
+msgid "Code: 102, Message: %(mensaje)s. Fiscal number %(number)s already belongs to another e-factura."
+msgstr "Código: 102, Mensaje: %(mensaje)s. El número fiscal %(number)s ya pertenece a otra e-factura."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "DGI"
+msgstr "DGI"
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "DGI Error"
+msgstr "Error DGI"

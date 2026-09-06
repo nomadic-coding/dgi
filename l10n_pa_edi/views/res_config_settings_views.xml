@@ -47,8 +47,9 @@
                             <label for="hka_merge_same_dgi_code"/>
                             <div class="text-muted">
                                 Default for new invoices: send one e-factura line per DGI
-                                product/service code (same ITBMS/ISC). Can be overridden
-                                on each invoice.
+                                product/service code (same ITBMS/ISC) as quantity 1 with
+                                the net total as unit price. Can be overridden on each
+                                invoice.
                             </div>
                         </setting>
                     </block>

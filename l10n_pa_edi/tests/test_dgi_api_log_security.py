@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import time
+
 from odoo.exceptions import AccessError
 from odoo.tests import tagged
 
@@ -36,3 +38,30 @@ class TestL10nPaEdiApiLogSecurity(L10nPaEdiTestCommon):
         self.assertNotIn("visible", log.request_data)
         self.assertIn("***", log.response_data)
         self.assertIn("200", log.response_data)
+
+    def test_log_api_call_does_not_block_on_locked_invoice(self):
+        """Independent log cursor must not wait on the Enviar invoice row lock."""
+        invoice = self._create_dgi_invoice(partner=self.partner_contribuyente)
+        self.env.cr.execute(
+            "SELECT id FROM account_move WHERE id = %s FOR UPDATE",
+            [invoice.id],
+        )
+        started = time.monotonic()
+        self.env["hka.api.log"].log_api_call(
+            api_method="enviar",
+            request_data={"ok": True},
+            response_data={"codigo": "200"},
+            status="success",
+            move_id=invoice.id,
+            auto_commit=True,
+        )
+        self.assertLess(time.monotonic() - started, 8)
+        with self.env.registry.cursor() as cr:
+            cr.execute(
+                """
+                DELETE FROM hka_api_log
+                WHERE request_data LIKE %s
+                """,
+                ['%{"ok": true}%'],
+            )
+            cr.commit()
