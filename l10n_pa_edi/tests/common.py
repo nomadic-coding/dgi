@@ -76,6 +76,8 @@ class L10nPaEdiTestCommon(AccountTestInvoicingCommon):
             "hka_timeout": 30,
             "hka_verify_ssl": True,
             "hka_merge_same_dgi_code": True,
+            # XML fixtures lock immediate transfer (08); production default is Credit.
+            "hka_forma_pago": "08",
         })
 
     @classmethod

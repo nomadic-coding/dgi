@@ -41,7 +41,17 @@
                             </div>
                         </setting>
                     </block>
-                    <block title="E-Factura Lines">
+                    <block title="E-Factura Defaults">
+                        <setting>
+                            <label for="hka_forma_pago"/>
+                            <field name="hka_forma_pago"/>
+                            <div class="text-muted">
+                                Default for new invoices. Credit (01) means the sale is
+                                on account; due dates are sent as DGI plazos. Use cash,
+                                card, or transfer only when that payment happens at
+                                invoicing. Can be overridden on each invoice.
+                            </div>
+                        </setting>
                         <setting>
                             <field name="hka_merge_same_dgi_code" class="oe_inline"/>
                             <label for="hka_merge_same_dgi_code"/>

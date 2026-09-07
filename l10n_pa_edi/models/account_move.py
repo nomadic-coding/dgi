@@ -10,6 +10,7 @@ from odoo.addons.l10n_pa_edi.models.hka_combinations import (
     HKA_CONTINGENCY_EMISSION,
     HKA_DESTINO_BY_DOCUMENT,
     HKA_DGI_TAB_FIELDS,
+    HKA_FORMA_PAGO_SELECTION,
     HKA_MOTIVO_CONTINGENCIA_MIN,
     HKA_NATURALEZA_BY_DOCUMENT,
     HKA_POSTERIOR_EMISSION,
@@ -103,9 +104,10 @@ class AccountMove(models.Model):
                 record.hka_tipo_documento_manual = True
 
     @api.onchange("company_id")
-    def _onchange_company_hka_merge_same_dgi_code(self):
+    def _onchange_company_hka_defaults(self):
         if self.company_id:
             self.hka_merge_same_dgi_code = self.company_id.hka_merge_same_dgi_code
+            self.hka_forma_pago = self.company_id.hka_forma_pago or "01"
 
     @api.onchange(
         "partner_id",
@@ -190,20 +192,9 @@ class AccountMove(models.Model):
     )
 
     hka_forma_pago = fields.Selection(
-        [
-            ("01", "01 - Crédito (Credit)"),
-            ("02", "02 - Efectivo (Cash)"),
-            ("03", "03 - Tarjeta Crédito (Credit Card)"),
-            ("04", "04 - Tarjeta Débito (Debit Card)"),
-            ("05", "05 - Tarjeta Fidelización (Loyalty Card)"),
-            ("06", "06 - Vale (Voucher)"),
-            ("07", "07 - Tarjeta de Regalo (Gift Card)"),
-            ("08", "08 - Transf/Depósito cta. Bancaria (Bank Transfer/Deposit)"),
-            ("09", "09 - Cheque (Check)"),
-            ("99", "99 - Otro (Other)"),
-        ],
+        HKA_FORMA_PAGO_SELECTION,
         string="Payment Method",
-        default="08",
+        default="01",
     )
 
     hka_desc_forma_pago = fields.Char(
@@ -438,16 +429,25 @@ class AccountMove(models.Model):
         defaults.update({key: vals[key] for key in defaults if key in vals})
         return self.new(defaults)
 
+    @api.model
+    def default_get(self, fields_list):
+        defaults = super().default_get(fields_list)
+        if "hka_forma_pago" in fields_list:
+            defaults["hka_forma_pago"] = self.env.company.hka_forma_pago or "01"
+        return defaults
+
     @api.model_create_multi
     def create(self, vals_list):
         cleaned = []
         for vals in vals_list:
             vals = {key: value for key, value in vals.items() if key not in self._DGI_API_FIELDS}
+            company = self.env["res.company"].browse(
+                vals.get("company_id") or self.env.company.id
+            )
             if "hka_merge_same_dgi_code" not in vals:
-                company = self.env["res.company"].browse(
-                    vals.get("company_id") or self.env.company.id
-                )
                 vals["hka_merge_same_dgi_code"] = company.hka_merge_same_dgi_code
+            if "hka_forma_pago" not in vals:
+                vals["hka_forma_pago"] = company.hka_forma_pago or "01"
             move_type = vals.get("move_type") or self.env.context.get(
                 "default_move_type"
             )

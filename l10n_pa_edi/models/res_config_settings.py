@@ -30,3 +30,7 @@ class ResConfigSettings(models.TransientModel):
         related="company_id.hka_merge_same_dgi_code",
         readonly=False,
     )
+    hka_forma_pago = fields.Selection(
+        related="company_id.hka_forma_pago",
+        readonly=False,
+    )

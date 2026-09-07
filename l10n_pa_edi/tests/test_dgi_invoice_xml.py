@@ -250,7 +250,9 @@ class TestL10nPaEdiInvoiceXml(L10nPaEdiTestCommon):
         self.assertEqual(totals["tiempoPago"], "2")
         self.assertEqual(totals["listaFormaPago"][0]["formaPagoFact"], "01")
         self.assertEqual(len(totals["listaPagoPlazo"]), 1)
+        self.assertEqual(len(totals["listaFormaPago"]), 1)
         self.assertEqual(totals["listaPagoPlazo"][0]["valorCuota"], "1070.00")
+        self.assertEqual(totals["listaFormaPago"][0]["valorCuotaPagada"], "1070.00")
         self.assertTrue(totals["listaPagoPlazo"][0]["fechaVenceCuota"].startswith("2026-04-15"))
         self.assertGreaterEqual(len(totals["listaPagoPlazo"][0]["infoPagoCuota"]), 15)
         self.assertLess(len(totals["listaPagoPlazo"][0]["infoPagoCuota"]), 80)
@@ -275,11 +277,72 @@ class TestL10nPaEdiInvoiceXml(L10nPaEdiTestCommon):
                 "Cuota a fecha de vencimiento.",
             )
 
+    def test_credit_payment_uses_receivable_installments(self):
+        term = self.env["account.payment.term"].create({
+            "name": "30% Now, Balance 60 Days",
+            "line_ids": [
+                Command.create({
+                    "value": "percent",
+                    "value_amount": 30,
+                    "nb_days": 0,
+                    "delay_type": "days_after",
+                }),
+                Command.create({
+                    "value": "percent",
+                    "value_amount": 70,
+                    "nb_days": 60,
+                    "delay_type": "days_after",
+                }),
+            ],
+        })
+        invoice = self._create_dgi_invoice(
+            partner=self.partner_contribuyente,
+            extra_vals={
+                "hka_forma_pago": "01",
+                "invoice_payment_term_id": term.id,
+            },
+        )
+        recv = invoice.line_ids.filtered(
+            lambda line: line.account_type == "asset_receivable"
+            and line.display_type == "payment_term"
+        ).sorted(lambda line: (line.date_maturity, line.id))
+        self.assertEqual(len(recv), 2)
+        totals = invoice._prepare_dgi_document_data()["documento"]["totalesSubTotales"]
+        plazos = totals["listaPagoPlazo"]
+        formas = totals["listaFormaPago"]
+        self.assertEqual(totals["tiempoPago"], "2")
+        self.assertEqual(len(plazos), 2)
+        self.assertEqual(len(formas), 2)
+        self.assertEqual(
+            [plazo["fechaVenceCuota"][:10] for plazo in plazos],
+            [line.date_maturity.isoformat() for line in recv],
+        )
+        self.assertEqual(
+            [plazo["valorCuota"] for plazo in plazos],
+            ["{:.2f}".format(abs(line.amount_currency)) for line in recv],
+        )
+        self.assertEqual(
+            [forma["valorCuotaPagada"] for forma in formas],
+            [plazo["valorCuota"] for plazo in plazos],
+        )
+        self.assertTrue(all(forma["formaPagoFact"] == "01" for forma in formas))
+        self.assertAlmostEqual(
+            sum(float(plazo["valorCuota"]) for plazo in plazos),
+            float(totals["totalFactura"]),
+            places=2,
+        )
+        for plazo in plazos:
+            self.assertGreaterEqual(len(plazo["infoPagoCuota"]), 15)
+        invoice._validate_before_send_to_dgi()
+
     def test_credit_payment_requires_due_date(self):
         invoice = self._create_dgi_invoice(
             partner=self.partner_contribuyente,
             extra_vals={"hka_forma_pago": "01"},
         )
+        invoice.line_ids.filtered(
+            lambda line: line.display_type == "payment_term"
+        ).date_maturity = False
         invoice.invoice_date_due = False
         with self.assertRaises(UserError) as error:
             invoice._validate_before_send_to_dgi()
@@ -477,6 +540,15 @@ class TestL10nPaEdiInvoiceXml(L10nPaEdiTestCommon):
         self.company.hka_merge_same_dgi_code = True
         invoice_on = self._create_dgi_invoice(post=False)
         self.assertTrue(invoice_on.hka_merge_same_dgi_code)
+
+    def test_new_invoice_inherits_company_payment_method(self):
+        self.assertEqual(self.company.hka_forma_pago, "08")
+        transfer = self._create_dgi_invoice(post=False)
+        self.assertEqual(transfer.hka_forma_pago, "08")
+        self.company.hka_forma_pago = "01"
+        credit = self._create_dgi_invoice(post=False)
+        self.assertEqual(credit.hka_forma_pago, "01")
+        self.company.hka_forma_pago = "08"
 
     def test_cannot_forge_dgi_sent_fields(self):
         invoice = self._create_dgi_invoice()

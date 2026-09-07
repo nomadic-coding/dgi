@@ -50,6 +50,59 @@ class L10nPaEdiPayload(models.AbstractModel):
             "Due-date installment."
         )
 
+    def _hka_receivable_installment_lines(self, move):
+        """Receivable installment AMLs created from the invoice payment term."""
+        return move.line_ids.filtered(
+            lambda line: line.account_type == "asset_receivable"
+            and line.display_type == "payment_term"
+        ).sorted(lambda line: (line.date_maturity or fields.Date.to_date("1970-01-01"), line.id))
+
+    def _hka_prepare_lista_pago_plazo(self, move, hka_total):
+        """One HKA cuota per receivable installment; else invoice due date."""
+        note = self._hka_info_pago_cuota(move)
+        lines = self._hka_receivable_installment_lines(move)
+        if lines:
+            if any(not line.date_maturity for line in lines):
+                raise UserError(
+                    _("Each credit installment needs a due date when Payment Method is 01 (Credit).")
+                )
+            amounts = [
+                move.currency_id.round(abs(line.amount_currency)) for line in lines
+            ]
+            amounts[-1] = move.currency_id.round(hka_total - sum(amounts[:-1]))
+            return [
+                {
+                    "fechaVenceCuota": self._format_dgi_datetime(line.date_maturity),
+                    "valorCuota": "{:.2f}".format(amount),
+                    "infoPagoCuota": note,
+                }
+                for line, amount in zip(lines, amounts)
+            ]
+        if not move.invoice_date_due:
+            raise UserError(_("Invoice due date is required when Payment Method is 01 (Credit)."))
+        return [{
+            "fechaVenceCuota": self._format_dgi_datetime(move.invoice_date_due),
+            "valorCuota": "{:.2f}".format(hka_total),
+            "infoPagoCuota": note,
+        }]
+
+    def _hka_prepare_lista_forma_pago(self, move, hka_total, plazos=None):
+        """HKA 109: each formaPago occurrence must match the same pagoPlazo amount."""
+        extra = {}
+        if move.hka_forma_pago == "99" and move.hka_desc_forma_pago:
+            extra["descFormaPago"] = move.hka_desc_forma_pago.strip()
+        amounts = [plazo["valorCuota"] for plazo in plazos] if plazos else [
+            "{:.2f}".format(hka_total)
+        ]
+        return [
+            {
+                "formaPagoFact": move.hka_forma_pago,
+                "valorCuotaPagada": amount,
+                **extra,
+            }
+            for amount in amounts
+        ]
+
     def _prepare_dgi_informacion_interes(self, move):
         """Plain text for HKA (narration is HTML); line breaks as U+2028 LINE SEPARATOR."""
         move.ensure_one()
@@ -682,16 +735,23 @@ class L10nPaEdiPayload(models.AbstractModel):
             raise UserError(_('Cannot send to DGI: invoice has no product lines for e-factura items.'))
         hka_total = move.currency_id.round(move.amount_untaxed + total_itbms + total_isc)
         tiempo_pago = '2' if move.hka_forma_pago == '01' else '1'
-        totales_sub_totales = {'totalPrecioNeto': '{:.2f}'.format(move.amount_untaxed), 'totalITBMS': '{:.2f}'.format(total_itbms), 'totalMontoGravado': '{:.2f}'.format(total_itbms + total_isc), 'totalFactura': '{:.2f}'.format(hka_total), 'totalValorRecibido': '{:.2f}'.format(hka_total), 'totalTodosItems': '{:.2f}'.format(hka_total), 'tiempoPago': tiempo_pago, 'nroItems': str(len(lista_items)), 'listaFormaPago': [{'formaPagoFact': move.hka_forma_pago, 'valorCuotaPagada': '{:.2f}'.format(hka_total), **({'descFormaPago': move.hka_desc_forma_pago.strip()} if move.hka_forma_pago == '99' and move.hka_desc_forma_pago else {})}]}
-        if tiempo_pago == '2':
-            if not move.invoice_date_due:
-                raise UserError(_('Invoice due date is required when Payment Method is 01 (Credit).'))
-            totales_sub_totales['listaPagoPlazo'] = [{
-                'fechaVenceCuota': self._format_dgi_datetime(move.invoice_date_due),
-                'valorCuota': '{:.2f}'.format(hka_total),
-                # HKA treats a missing/empty note as length 0; DGI requires 15–1000.
-                'infoPagoCuota': self._hka_info_pago_cuota(move),
-            }]
+        plazos = (
+            self._hka_prepare_lista_pago_plazo(move, hka_total)
+            if tiempo_pago == '2' else None
+        )
+        totales_sub_totales = {
+            'totalPrecioNeto': '{:.2f}'.format(move.amount_untaxed),
+            'totalITBMS': '{:.2f}'.format(total_itbms),
+            'totalMontoGravado': '{:.2f}'.format(total_itbms + total_isc),
+            'totalFactura': '{:.2f}'.format(hka_total),
+            'totalValorRecibido': '{:.2f}'.format(hka_total),
+            'totalTodosItems': '{:.2f}'.format(hka_total),
+            'tiempoPago': tiempo_pago,
+            'nroItems': str(len(lista_items)),
+            'listaFormaPago': self._hka_prepare_lista_forma_pago(move, hka_total, plazos),
+        }
+        if plazos:
+            totales_sub_totales['listaPagoPlazo'] = plazos
         if total_isc > 0:
             totales_sub_totales['totalISC'] = '{:.2f}'.format(total_isc)
         if move.hka_destino_operacion == '2' or move.partner_id.dgi_tipo_cliente_fe == '04':
@@ -795,9 +855,16 @@ class L10nPaEdiPayload(models.AbstractModel):
         return []
 
     def _dgi_credit_payment_errors(self, move):
-        """HKA tiempoPago 2 requires listaPagoPlazo (invoice due date)."""
+        """HKA tiempoPago 2 requires listaPagoPlazo from receivable installments."""
         move.ensure_one()
         if move.hka_forma_pago != '01':
+            return []
+        lines = self._hka_receivable_installment_lines(move)
+        if lines:
+            if any(not line.date_maturity for line in lines):
+                return [
+                    _("Each credit installment needs a due date when Payment Method is 01 (Credit).")
+                ]
             return []
         if not move.invoice_date_due:
             return [_("Invoice due date is required when Payment Method is 01 (Credit).")]

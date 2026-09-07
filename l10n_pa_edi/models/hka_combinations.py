@@ -13,6 +13,19 @@ Rules from https://felwiki.thefactoryhka.com.pa/enviar and the DGI ficha técnic
 - formaPago 99 requires a description
 """
 
+HKA_FORMA_PAGO_SELECTION = [
+    ("01", "01 - Crédito (Credit)"),
+    ("02", "02 - Efectivo (Cash)"),
+    ("03", "03 - Tarjeta Crédito (Credit Card)"),
+    ("04", "04 - Tarjeta Débito (Debit Card)"),
+    ("05", "05 - Tarjeta Fidelización (Loyalty Card)"),
+    ("06", "06 - Vale (Voucher)"),
+    ("07", "07 - Tarjeta de Regalo (Gift Card)"),
+    ("08", "08 - Transf/Depósito cta. Bancaria (Bank Transfer/Deposit)"),
+    ("09", "09 - Cheque (Check)"),
+    ("99", "99 - Otro (Other)"),
+]
+
 HKA_TIPO_DOCUMENTO_BY_MOVE = {
     "out_invoice": ("01", "03", "08", "09", "10"),
     "out_refund": ("04", "06"),

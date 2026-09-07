@@ -149,6 +149,18 @@ msgid "Merge Same DGI Code Lines"
 msgstr "Combinar líneas con el mismo código DGI"
 
 #. module: l10n_pa_edi
+#: model:ir.model.fields,field_description:l10n_pa_edi.field_res_company__hka_forma_pago
+#: model:ir.model.fields,field_description:l10n_pa_edi.field_res_config_settings__hka_forma_pago
+msgid "Default Payment Method"
+msgstr "Forma de pago predeterminada"
+
+#. module: l10n_pa_edi
+#: model:ir.model.fields,help:l10n_pa_edi.field_res_company__hka_forma_pago
+#: model:ir.model.fields,help:l10n_pa_edi.field_res_config_settings__hka_forma_pago
+msgid "Default DGI payment method for new invoices. Credit (01) means the sale is on account; plazos come from the payment term."
+msgstr "Forma de pago DGI predeterminada para facturas nuevas. Crédito (01) significa venta a plazo; los vencimientos salen del plazo de pago."
+
+#. module: l10n_pa_edi
 #: model:ir.model.fields,help:l10n_pa_edi.field_account_move__hka_merge_same_dgi_code
 msgid "Group e-factura lines that share the same DGI product/service code (and the same ITBMS/ISC) into one line sent as quantity 1 with the net total as unit price. Defaults from the company setting."
 msgstr "Agrupa en una sola línea de e-factura las líneas que comparten el mismo código DGI de producto/servicio (y el mismo ITBMS/ISC), enviada con cantidad 1 y el total neto como precio unitario. El valor inicial sale de la configuración de la compañía."
@@ -332,6 +344,12 @@ msgstr "Los datos DGI no se pueden cambiar después de enviar la factura."
 #: code:addons/l10n_pa_edi/models/dgi_payload.py:0
 msgid "Invoice due date is required when Payment Method is 01 (Credit)."
 msgstr "La fecha de vencimiento es obligatoria cuando la forma de pago es 01 (Crédito)."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/dgi_payload.py:0
+msgid "Each credit installment needs a due date when Payment Method is 01 (Credit)."
+msgstr "Cada cuota de crédito necesita una fecha de vencimiento cuando la forma de pago es 01 (Crédito)."
 
 #. module: l10n_pa_edi
 #. odoo-python

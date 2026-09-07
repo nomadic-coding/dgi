@@ -2,6 +2,8 @@
 
 from odoo import fields, models
 
+from odoo.addons.l10n_pa_edi.models.hka_combinations import HKA_FORMA_PAGO_SELECTION
+
 
 class ResCompany(models.Model):
     _inherit = "res.company"
@@ -44,6 +46,13 @@ class ResCompany(models.Model):
         help="Default for new invoices: group e-factura lines that share the "
         "same DGI product/service code (and the same ITBMS/ISC) into one line "
         "sent as quantity 1 with the net total as unit price.",
+    )
+    hka_forma_pago = fields.Selection(
+        HKA_FORMA_PAGO_SELECTION,
+        string="Default Payment Method",
+        default="01",
+        help="Default DGI payment method for new invoices. Credit (01) means "
+        "the sale is on account; plazos come from the payment term.",
     )
     hka_auth_token = fields.Char(
         string="HKA Auth Token",
