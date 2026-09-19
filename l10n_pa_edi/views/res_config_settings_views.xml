@@ -7,7 +7,7 @@
         <field name="arch" type="xml">
             <xpath expr="//form" position="inside">
                 <app string="Panama Electronic Invoicing" name="l10n_pa_edi">
-                    <block title="HKA API Configuration">
+                    <block title="HKA API Configuration" groups="base.group_system">
                         <setting>
                             <label for="hka_api_url"/>
                             <field name="hka_api_url" placeholder="https://demointegracion.thefactoryhka.com.pa"/>
@@ -38,6 +38,28 @@
                             <label for="hka_verify_ssl"/>
                             <div class="text-muted">
                                 Verify SSL certificates
+                            </div>
+                        </setting>
+                    </block>
+                    <block title="E-Factura Defaults">
+                        <setting>
+                            <label for="hka_forma_pago"/>
+                            <field name="hka_forma_pago"/>
+                            <div class="text-muted">
+                                Default for new invoices. Credit (01) means the sale is
+                                on account; due dates are sent as DGI plazos. Use cash,
+                                card, or transfer only when that payment happens at
+                                invoicing. Can be overridden on each invoice.
+                            </div>
+                        </setting>
+                        <setting>
+                            <field name="hka_merge_same_dgi_code" class="oe_inline"/>
+                            <label for="hka_merge_same_dgi_code"/>
+                            <div class="text-muted">
+                                Default for new invoices: send one e-factura line per DGI
+                                product/service code (same ITBMS/ISC) as quantity 1 with
+                                the net total as unit price. Can be overridden on each
+                                invoice.
                             </div>
                         </setting>
                     </block>

@@ -1,11 +1,8 @@
 # -*- coding: utf-8 -*-
 
-import logging
-
 from odoo import _, api, fields, models
-from odoo.exceptions import UserError
-
-_logger = logging.getLogger(__name__)
+from odoo.exceptions import AccessError, UserError
+from odoo.tools.mail import html2plaintext
 
 
 class DgiAnulacionWizard(models.TransientModel):
@@ -24,7 +21,7 @@ class DgiAnulacionWizard(models.TransientModel):
     motivo_anulacion = fields.Text(
         string="Cancellation Reason",
         required=True,
-        help="Reason for canceling this invoice (minimum 10 characters, maximum 500 characters)",
+        help="Reason for canceling this invoice (minimum 20 characters, maximum 500 characters)",
     )
 
     # Document data fields (readonly, for display)
@@ -94,11 +91,15 @@ class DgiAnulacionWizard(models.TransientModel):
         return res
 
     def action_anular(self):
-        """Cancel the invoice in Odoo first, then submit cancellation to DGI"""
+        """Store the motivo, mark the HKA EDI document to cancel, then process it."""
         self.ensure_one()
-        move = self.move_id
+        if not self.env.user.has_group("account.group_account_manager"):
+            raise AccessError(_("Only accounting managers can cancel invoices in DGI."))
 
-        # Validate invoice state
+        move = self.move_id
+        move.check_access_rights("write")
+        move.check_access_rule("write")
+
         if not move.dgi_sent:
             raise UserError(_("This invoice has not been sent to DGI yet."))
 
@@ -109,17 +110,20 @@ class DgiAnulacionWizard(models.TransientModel):
                 )
             )
 
+        window_error = move._dgi_anulacion_window_error()
+        if window_error:
+            raise UserError(window_error)
+
         if not self.motivo_anulacion:
             raise UserError(_("Please provide a cancellation reason."))
 
-        # Validate motivoAnulacion length (API requirement: typically 10-500 characters)
         motivo_anulacion_clean = (self.motivo_anulacion or "").strip()
         motivo_length = len(motivo_anulacion_clean)
 
-        if motivo_length < 10:
+        if motivo_length < 20:
             raise UserError(
                 _(
-                    "Cancellation reason must be at least 10 characters long. Current length: %d characters."
+                    "Cancellation reason must be at least 20 characters long. Current length: %d characters."
                 )
                 % motivo_length
             )
@@ -132,65 +136,38 @@ class DgiAnulacionWizard(models.TransientModel):
                 % motivo_length
             )
 
-        # Step 1: Cancel the invoice in Odoo first
-        # Use context flag to bypass DGI cancellation check
-        move.with_context(force_dgi_cancel=True).button_cancel()
-        move.message_post(
-            body=_("Invoice canceled in Odoo before DGI cancellation."),
-            message_type="notification",
+        move.write({"hka_motivo_anulacion": motivo_anulacion_clean})
+
+        edi_docs = move._l10n_pa_hka_edi_documents().filtered(
+            lambda doc: doc.state == "sent"
         )
+        if not edi_docs:
+            raise UserError(_("This invoice has no HKA electronic document to cancel."))
 
-        # Step 2: Submit cancellation to DGI
-        # Prepare cancellation data according to API specification
-        anulacion_data = {
-            "motivoAnulacion": motivo_anulacion_clean,
-            "datosDocumento": {
-                "codigoSucursalEmisor": self.codigo_sucursal_emisor or "",
-                "numeroDocumentoFiscal": self.numero_documento_fiscal or "",
-                "puntoFacturacionFiscal": (self.punto_facturacion_fiscal.zfill(3)),
-                "serialDispositivo": "",  # Not available in current model
-                "tipoDocumento": self.tipo_documento,
-                "tipoEmision": self.tipo_emision,
-            },
-        }
-
-        # Call HKA API to cancel the invoice
-        hka_api = self.env["l10n_pa_edi.hka_api"]
-        result = hka_api.anular(anulacion_data, move_id=move.id)
-
-        # Update invoice status
-        if result.get("success"):
-            move.write(
-                {
-                    "dgi_status": "anulado",
-                    "dgi_error_message": False,
-                }
+        edi_docs.write({"state": "to_cancel", "error": False, "blocking_level": False})
+        move.action_process_edi_web_services(with_commit=False)
+        move.invalidate_recordset([
+            "dgi_status",
+            "dgi_error_message",
+            "edi_state",
+            "edi_error_message",
+            "state",
+        ])
+        if move.dgi_status != "anulado":
+            error_message = html2plaintext(
+                move.edi_error_message or move.dgi_error_message or _("Unknown error")
             )
-            message = (
-                _("Invoice successfully canceled in DGI. Reason: %s")
-                % self.motivo_anulacion
-            )
-            move.message_post(
-                body=message,
-                message_type="notification",
-            )
-            return True
-        else:
-            error_message = (
-                result.get("error_message")
-                or result.get("mensaje")
-                or _("Unknown error")
-            )
-            move.write(
-                {
-                    "dgi_error_message": error_message,
-                }
-            )
-            # Invoice was already canceled in Odoo, so we need to inform user about DGI failure
             raise UserError(
                 _(
-                    "Invoice was canceled in Odoo, but failed to cancel in DGI: %s. "
-                    "You may need to manually handle this situation."
+                    "Failed to cancel the invoice in DGI: %s. "
+                    "The invoice was not canceled in Odoo."
                 )
                 % error_message
             )
+
+        move.message_post(
+            body=_("Invoice successfully canceled in DGI. Reason: %s")
+            % self.motivo_anulacion,
+            message_type="notification",
+        )
+        return True

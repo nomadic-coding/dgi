@@ -1,0 +1,388 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* l10n_pa_edi
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 18.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-09-05 20:00+0000\n"
+"PO-Revision-Date: 2026-09-05 20:00+0000\n"
+"Last-Translator: STARK LABS\n"
+"Language-Team: Spanish\n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#. module: l10n_pa_edi
+#: model:ir.actions.act_window,name:l10n_pa_edi.action_hka_api_log
+#: model:ir.ui.menu,name:l10n_pa_edi.menu_hka_api_log
+msgid "HKA API Logs"
+msgstr "Registros API HKA"
+
+#. module: l10n_pa_edi
+#: model_terms:ir.ui.view,arch_db:l10n_pa_edi.view_move_form_dgi
+msgid "Send to DGI"
+msgstr "Enviar a DGI"
+
+#. module: l10n_pa_edi
+#: model_terms:ir.ui.view,arch_db:l10n_pa_edi.view_partner_form_dgi
+msgid "Validate RUC"
+msgstr "Validar RUC"
+
+#. module: l10n_pa_edi
+#: model_terms:ir.ui.view,arch_db:l10n_pa_edi.view_dgi_anulacion_wizard_form
+msgid "Cancel Invoice in DGI"
+msgstr "Anular factura en DGI"
+
+#. module: l10n_pa_edi
+#: model:ir.model.fields,field_description:l10n_pa_edi.field_res_partner__dgi_ruc_validated
+msgid "RUC Validated"
+msgstr "RUC validado"
+
+#. module: l10n_pa_edi
+#: model:ir.model.fields,field_description:l10n_pa_edi.field_account_move__dgi_sent
+msgid "Sent to DGI"
+msgstr "Enviado a DGI"
+
+#. module: l10n_pa_edi
+#: model:ir.model.fields,field_description:l10n_pa_edi.field_account_move__dgi_cufe
+msgid "CUFE"
+msgstr "CUFE"
+
+#. module: l10n_pa_edi
+#: model:ir.model.fields,field_description:l10n_pa_edi.field_account_journal__use_dgi_electronic_invoicing
+msgid "Use DGI Electronic Invoicing"
+msgstr "Usar facturación electrónica DGI"
+
+#. module: l10n_pa_edi
+#: model:ir.model.fields,field_description:l10n_pa_edi.field_account_journal__dgi_auto_send_on_post
+msgid "Auto-Send to DGI on Confirm"
+msgstr "Enviar automáticamente a DGI al confirmar"
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/res_partner.py:0
+msgid "Please enter a RUC number first"
+msgstr "Primero ingrese un número de RUC"
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/res_partner.py:0
+msgid "Please select a valid Tipo RUC (01=Natural Person, 02=Juridical Person)"
+msgstr "Seleccione un tipo de RUC válido (01=Persona natural, 02=Persona jurídica)"
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "This document has already been sent to DGI"
+msgstr "Este documento ya fue enviado a DGI"
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "Only posted invoices can be sent to DGI"
+msgstr "Solo las facturas publicadas se pueden enviar a DGI"
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "DGI Electronic Invoicing is not enabled for this journal"
+msgstr "La facturación electrónica DGI no está habilitada en este diario"
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/wizard/dgi_anulacion_wizard.py:0
+msgid "This invoice has not been sent to DGI yet."
+msgstr "Esta factura aún no ha sido enviada a DGI."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/wizard/dgi_anulacion_wizard.py:0
+msgid "Please provide a cancellation reason."
+msgstr "Indique el motivo de anulación."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/wizard/dgi_anulacion_wizard.py:0
+msgid "Cancellation reason must be at least 20 characters long. Current length: %d characters."
+msgstr "El motivo de anulación debe tener al menos 20 caracteres. Longitud actual: %d caracteres."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/wizard/dgi_anulacion_wizard.py:0
+msgid "Cancellation reason must not exceed 500 characters. Current length: %d characters."
+msgstr "El motivo de anulación no debe superar 500 caracteres. Longitud actual: %d caracteres."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/wizard/dgi_anulacion_wizard.py:0
+msgid "Failed to cancel the invoice in DGI: %s. The invoice was not canceled in Odoo."
+msgstr "No se pudo anular la factura en DGI: %s. La factura no se canceló en Odoo."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_tax.py:0
+msgid "If HKA Tax Code is '04' (ISC), you must also set the HKA ISC rate."
+msgstr "Si el código de impuesto HKA es '04' (ISC), también debe configurar la tasa ISC HKA."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "Product DGI/CPBS code is required when the receiver is a government entity (%s)."
+msgstr "El código DGI/CPBS del producto es obligatorio cuando el receptor es una entidad de gobierno (%s)."
+
+#. module: l10n_pa_edi
+#: model:ir.model.fields,field_description:l10n_pa_edi.field_account_move__hka_merge_same_dgi_code
+#: model:ir.model.fields,field_description:l10n_pa_edi.field_res_company__hka_merge_same_dgi_code
+#: model:ir.model.fields,field_description:l10n_pa_edi.field_res_config_settings__hka_merge_same_dgi_code
+msgid "Sale Type"
+msgstr "Tipo de venta"
+
+#. module: l10n_pa_edi
+#: model:ir.model.fields,field_description:l10n_pa_edi.field_account_move__hka_merge_same_dgi_code
+#: model:ir.model.fields,field_description:l10n_pa_edi.field_res_company__hka_merge_same_dgi_code
+#: model:ir.model.fields,field_description:l10n_pa_edi.field_res_config_settings__hka_merge_same_dgi_code
+msgid "Merge Same DGI Code Lines"
+msgstr "Combinar líneas con el mismo código DGI"
+
+#. module: l10n_pa_edi
+#: model:ir.model.fields,field_description:l10n_pa_edi.field_res_company__hka_forma_pago
+#: model:ir.model.fields,field_description:l10n_pa_edi.field_res_config_settings__hka_forma_pago
+msgid "Default Payment Method"
+msgstr "Forma de pago predeterminada"
+
+#. module: l10n_pa_edi
+#: model:ir.model.fields,help:l10n_pa_edi.field_res_company__hka_forma_pago
+#: model:ir.model.fields,help:l10n_pa_edi.field_res_config_settings__hka_forma_pago
+msgid "Default DGI payment method for new invoices. Credit (01) means the sale is on account; plazos come from the payment term."
+msgstr "Forma de pago DGI predeterminada para facturas nuevas. Crédito (01) significa venta a plazo; los vencimientos salen del plazo de pago."
+
+#. module: l10n_pa_edi
+#: model:ir.model.fields,help:l10n_pa_edi.field_account_move__hka_merge_same_dgi_code
+msgid "Group e-factura lines that share the same DGI product/service code (and the same ITBMS/ISC) into one line sent as quantity 1 with the net total as unit price. Defaults from the company setting."
+msgstr "Agrupa en una sola línea de e-factura las líneas que comparten el mismo código DGI de producto/servicio (y el mismo ITBMS/ISC), enviada con cantidad 1 y el total neto como precio unitario. El valor inicial sale de la configuración de la compañía."
+
+#. module: l10n_pa_edi
+#: model:ir.model.fields,help:l10n_pa_edi.field_res_company__hka_merge_same_dgi_code
+#: model:ir.model.fields,help:l10n_pa_edi.field_res_config_settings__hka_merge_same_dgi_code
+msgid "Default for new invoices: group e-factura lines that share the same DGI product/service code (and the same ITBMS/ISC) into one line sent as quantity 1 with the net total as unit price."
+msgstr "Valor predeterminado para facturas nuevas: agrupa en una sola línea de e-factura las líneas que comparten el mismo código DGI de producto/servicio (y el mismo ITBMS/ISC), enviada con cantidad 1 y el total neto como precio unitario."
+
+#. module: l10n_pa_edi
+#: model_terms:ir.ui.view,arch_db:l10n_pa_edi.res_config_settings_view_form
+msgid "E-Factura Lines"
+msgstr "Líneas de e-factura"
+
+#. module: l10n_pa_edi
+#: model_terms:ir.ui.view,arch_db:l10n_pa_edi.res_config_settings_view_form
+msgid "Default for new invoices: send one e-factura line per DGI product/service code (same ITBMS/ISC) as quantity 1 with the net total as unit price. Can be overridden on each invoice."
+msgstr "Valor predeterminado para facturas nuevas: enviar una línea de e-factura por código DGI de producto/servicio (mismo ITBMS/ISC) con cantidad 1 y el total neto como precio unitario. Se puede cambiar en cada factura."
+
+#. module: l10n_pa_edi
+#: model:ir.model.fields,field_description:l10n_pa_edi.field_account_move__hka_desc_forma_pago
+msgid "Payment Method Description"
+msgstr "Descripción de la forma de pago"
+
+#. module: l10n_pa_edi
+#: model:ir.model.fields,field_description:l10n_pa_edi.field_account_move__hka_fecha_inicio_contingencia
+msgid "Contingency Start"
+msgstr "Inicio de contingencia"
+
+#. module: l10n_pa_edi
+#: model:ir.model.fields,field_description:l10n_pa_edi.field_account_move__hka_motivo_contingencia
+msgid "Contingency Reason"
+msgstr "Motivo de contingencia"
+
+#. module: l10n_pa_edi
+#: model_terms:ir.ui.view,arch_db:l10n_pa_edi.view_move_form_dgi
+msgid "At least 15 characters"
+msgstr "Al menos 15 caracteres"
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "Document Type %(doc)s is not valid for this invoice and receiver."
+msgstr "El tipo de documento %(doc)s no es válido para esta factura y este receptor."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "Nature of Operation %(nature)s is not valid for Document Type %(doc)s."
+msgstr "La naturaleza de la operación %(nature)s no es válida para el tipo de documento %(doc)s."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "Destination %(dest)s is not valid for Document Type %(doc)s."
+msgstr "El destino %(dest)s no es válido para el tipo de documento %(doc)s."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "Operation Type %(op)s is not valid for Document Type %(doc)s."
+msgstr "El tipo de operación %(op)s no es válido para el tipo de documento %(doc)s."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "Sale Type is required for sales documents."
+msgstr "El tipo de venta es obligatorio en documentos de venta."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "Sale Type must be empty when the document is not a sale."
+msgstr "El tipo de venta debe quedar vacío cuando el documento no es una venta."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "CAFE Delivery %(delivery)s is not valid for CAFE Format %(fmt)s."
+msgstr "La entrega de CAFE %(delivery)s no es válida para el formato CAFE %(fmt)s."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "Contingency Start is required when Emission Type is 02."
+msgstr "El inicio de contingencia es obligatorio cuando el tipo de emisión es 02."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "Contingency Reason must be at least %(min)s characters when Emission Type is 02."
+msgstr "El motivo de contingencia debe tener al menos %(min)s caracteres cuando el tipo de emisión es 02."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "Payment Method Description is required when Payment Method is 99."
+msgstr "La descripción de la forma de pago es obligatoria cuando la forma de pago es 99."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/res_partner.py:0
+msgid "Foreign partners can only use Tipo RUC 04 (Foreign Entity)."
+msgstr "Los contactos extranjeros solo pueden usar el tipo de RUC 04 (Entidad extranjera)."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/res_partner.py:0
+msgid "Tipo RUC 04 (Foreign Entity) cannot be used for a Panama partner."
+msgstr "El tipo de RUC 04 (Entidad extranjera) no se puede usar en un contacto de Panamá."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "Tax is required on invoice line '%s'. Use a 0%% tax for exempt lines."
+msgstr "El impuesto es obligatorio en la línea de factura '%s'. Use un impuesto de 0%% para líneas exentas."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "Every product line must have a tax before confirming a DGI invoice. Use a 0%% tax for exempt lines."
+msgstr "Cada línea de producto debe tener un impuesto antes de confirmar una factura DGI. Use un impuesto de 0%% para líneas exentas."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "Tax '%s' has no HKA tax code. Map it to 00, 01, 02, 03, or 04 before confirming a DGI invoice."
+msgstr "El impuesto '%s' no tiene código HKA. Asígnelo a 00, 01, 02, 03 o 04 antes de confirmar una factura DGI."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "Tax '%(tax)s' is HKA code %(code)s (%(expected)g%%) but its Odoo rate is %(actual)g%%."
+msgstr "El impuesto '%(tax)s' es código HKA %(code)s (%(expected)g%%) pero su tasa en Odoo es %(actual)g%%."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "Tax '%s' is HKA ISC (04) but has no HKA ISC rate."
+msgstr "El impuesto '%s' es ISC HKA (04) pero no tiene tasa ISC HKA."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "Document type %s requires the original e-factura. Create this credit/debit note from the posted invoice."
+msgstr "El tipo de documento %s requiere la e-factura original. Cree esta nota de crédito/débito desde la factura publicada."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "Cannot send credit/debit note: referenced CUFE must be 66 characters (HKA cufeFEReferenciada). Current length: %s"
+msgstr "No se puede enviar la nota de crédito/débito: el CUFE referenciado debe tener 66 caracteres (HKA cufeFEReferenciada). Longitud actual: %s"
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "Cannot send credit note: Original invoice date is missing for invoice %s"
+msgstr "No se puede enviar la nota de crédito: falta la fecha de la factura original %s"
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/hka_api.py:0
+msgid "Code: 102, Message: %(mensaje)s"
+msgstr "Código: 102, Mensaje: %(mensaje)s"
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "Emission Type 03/04 (post authorization) is not supported."
+msgstr "El tipo de emisión 03/04 (autorización posterior) no está soportado."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "DGI settings cannot be changed after the invoice is sent."
+msgstr "Los datos DGI no se pueden cambiar después de enviar la factura."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/dgi_payload.py:0
+msgid "Invoice due date is required when Payment Method is 01 (Credit)."
+msgstr "La fecha de vencimiento es obligatoria cuando la forma de pago es 01 (Crédito)."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/dgi_payload.py:0
+msgid "Each credit installment needs a due date when Payment Method is 01 (Credit)."
+msgstr "Cada cuota de crédito necesita una fecha de vencimiento cuando la forma de pago es 01 (Crédito)."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/dgi_payload.py:0
+msgid "Due-date installment."
+msgstr "Cuota a fecha de vencimiento."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "DGI does not allow cancellation more than %(hours)s hours after the invoice date (%(date)s)."
+msgstr "DGI no permite la anulación más de %(hours)s horas después de la fecha de la factura (%(date)s)."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/dgi_payload.py:0
+msgid "Credit note total %(credit).2f exceeds referenced invoice %(origin)s total %(origin_total).2f."
+msgstr "El total de la nota de crédito %(credit).2f supera el total %(origin_total).2f de la factura referenciada %(origin)s."
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/hka_api.py:0
+msgid "The document is duplicated"
+msgstr "El documento está duplicado"
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "DGI"
+msgstr "DGI"
+
+#. module: l10n_pa_edi
+#. odoo-python
+#: code:addons/l10n_pa_edi/models/account_move.py:0
+msgid "DGI Error"
+msgstr "Error DGI"

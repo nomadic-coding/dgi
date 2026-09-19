@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 
 import requests
 from odoo import _, api, models
-from odoo.exceptions import UserError
+from odoo.exceptions import AccessError, UserError
 
 _logger = logging.getLogger(__name__)
 
@@ -18,48 +18,83 @@ class HkaApi(models.AbstractModel):
     _description = "HKA API Client"
 
     @api.model
-    def _get_config(self):
-        """Get HKA configuration from settings"""
-        ICP = self.env["ir.config_parameter"].sudo()
+    def _auto_map_defaults(self):
+        """Idempotent catalog/tax mapping, also run on module update."""
+        from odoo.addons.l10n_pa_edi.hooks import (
+            _auto_map_dgi_catalogs,
+            _auto_map_l10n_pa_taxes,
+        )
+
+        _auto_map_dgi_catalogs(self.env)
+        _auto_map_l10n_pa_taxes(self.env)
+
+    def _check_hka_user_access(self):
+        if not self.env.user.has_group("account.group_account_invoice"):
+            raise AccessError(
+                _("You need invoicing rights to call the HKA electronic invoice API.")
+            )
+
+    @api.model
+    def _company_from_move(self, move_id=None):
+        if move_id:
+            move = self.env["account.move"].browse(move_id)
+            if move.exists():
+                return move.company_id
+        return self.env.company
+
+    @api.model
+    def _get_company(self, company=None):
+        return (company or self.env.company).sudo()
+
+    @api.model
+    def _get_config(self, company=None):
+        """Get HKA configuration from the company (not database-wide ICP)."""
+        company = self._get_company(company)
         return {
-            "api_url": ICP.get_param("l10n_pa_edi.hka_api_url", ""),
-            "usuario": ICP.get_param("l10n_pa_edi.hka_usuario", ""),
-            "clave": ICP.get_param("l10n_pa_edi.hka_clave", ""),
-            "timeout": int(ICP.get_param("l10n_pa_edi.hka_timeout", "30")),
-            "verify_ssl": ICP.get_param("l10n_pa_edi.hka_verify_ssl", "True") == "True",
+            "api_url": company.hka_api_url or "",
+            "usuario": company.hka_usuario or "",
+            "clave": company.hka_clave or "",
+            "timeout": int(company.hka_timeout or 30),
+            "verify_ssl": bool(company.hka_verify_ssl),
         }
 
     @api.model
-    def _get_access_token(self):
-        """Get valid JWT access token (cached or new)"""
-        ICP = self.env["ir.config_parameter"].sudo()
-
-        # Check cached token
-        token = ICP.get_param("l10n_pa_edi.hka_auth_token", "")
-        expiry_str = ICP.get_param("l10n_pa_edi.hka_auth_token_expiry", "")
+    def _get_access_token(self, company=None):
+        """Get a JWT cached on the company, or authenticate for a new one."""
+        company = self._get_company(company)
+        token = company.hka_auth_token or ""
+        expiry_str = company.hka_auth_token_expiry or ""
 
         if token and expiry_str:
             try:
                 expiry = datetime.fromisoformat(expiry_str)
                 if expiry > datetime.now():
-                    _logger.debug("Using cached HKA token")
+                    _logger.debug("Using cached HKA token for company %s", company.id)
                     return token
             except ValueError:
                 pass
 
-        # Get new token
         _logger.info("Authenticating with HKA to get new JWT token")
-        token = self._authenticate()
+        token = self._authenticate(company=company)
 
-        # Cache token for 55 minutes
         expiry = datetime.now() + timedelta(minutes=55)
-        ICP.set_param("l10n_pa_edi.hka_auth_token", token)
-        ICP.set_param("l10n_pa_edi.hka_auth_token_expiry", expiry.isoformat())
+        company.write({
+            "hka_auth_token": token,
+            "hka_auth_token_expiry": expiry.isoformat(),
+        })
 
         return token
 
     @api.model
-    def _authenticate(self):
+    def _clear_access_token(self, company=None):
+        company = self._get_company(company)
+        company.write({
+            "hka_auth_token": False,
+            "hka_auth_token_expiry": False,
+        })
+
+    @api.model
+    def _authenticate(self, company=None):
         """
         Authenticate with HKA API to obtain JWT token
 
@@ -70,7 +105,7 @@ class HkaApi(models.AbstractModel):
 
         Returns: JWT token as string
         """
-        config = self._get_config()
+        config = self._get_config(company=company)
         auth_url = f"{config['api_url'].rstrip('/')}/api/Autenticacion"
 
         # During authentication, Authorization header is just the usuario (no "Bearer")
@@ -123,7 +158,7 @@ class HkaApi(models.AbstractModel):
                 auth_token = response.text.strip()
 
             if not auth_token or not isinstance(auth_token, str):
-                _logger.error("Authentication response: %s", response.text[:500])
+                _logger.error("HKA authentication returned no JWT token")
                 raise UserError(
                     _("Authentication successful but no valid JWT token received")
                 )
@@ -132,9 +167,8 @@ class HkaApi(models.AbstractModel):
             return auth_token
 
         except requests.exceptions.HTTPError as exc:
-            error_msg = _("HKA Authentication failed (HTTP %s): %s") % (
-                response.status_code,
-                response.text[:200],
+            error_msg = _("HKA Authentication failed (HTTP %s)") % (
+                response.status_code if "response" in locals() else "?"
             )
             _logger.error(error_msg)
             raise UserError(error_msg) from exc
@@ -144,7 +178,29 @@ class HkaApi(models.AbstractModel):
             raise UserError(error_msg) from exc
 
     @api.model
-    def _make_request(self, endpoint, method="POST", data=None):
+    def _http_request(self, method, url, headers, data, config):
+        timeout = config["timeout"]
+        verify = config["verify_ssl"]
+        if method == "GET":
+            return requests.get(
+                url, headers=headers, params=data, timeout=timeout, verify=verify
+            )
+        if method == "POST":
+            return requests.post(
+                url, headers=headers, json=data, timeout=timeout, verify=verify
+            )
+        if method == "PUT":
+            return requests.put(
+                url, headers=headers, json=data, timeout=timeout, verify=verify
+            )
+        if method == "DELETE":
+            return requests.delete(url, headers=headers, timeout=timeout, verify=verify)
+        raise ValueError("Unsupported HTTP method: %s" % method)
+
+    @api.model
+    def _make_request(
+        self, endpoint, method="POST", data=None, company=None, _retried=False
+    ):
         """
         Make HTTP request to HKA API
 
@@ -153,8 +209,8 @@ class HkaApi(models.AbstractModel):
         Returns:
             tuple: (http_status_code, response_data)
         """
-        config = self._get_config()
-        token = self._get_access_token()
+        config = self._get_config(company=company)
+        token = self._get_access_token(company=company)
 
         url = f"{config['api_url'].rstrip('/')}/{endpoint.lstrip('/')}"
 
@@ -168,60 +224,27 @@ class HkaApi(models.AbstractModel):
         _logger.info("HKA API Request: %s %s", method, url)
 
         try:
-            if method == "GET":
-                response = requests.get(
-                    url,
-                    headers=headers,
-                    params=data,
-                    timeout=config["timeout"],
-                    verify=config["verify_ssl"],
+            response = self._http_request(method, url, headers, data, config)
+            _logger.info("HKA API Response: HTTP %s", response.status_code)
+            if response.status_code == 401 and not _retried:
+                _logger.info("HKA token rejected (401); refreshing and retrying")
+                self._clear_access_token(company)
+                return self._make_request(
+                    endpoint,
+                    method=method,
+                    data=data,
+                    company=company,
+                    _retried=True,
                 )
-            elif method == "POST":
-                response = requests.post(
-                    url,
-                    headers=headers,
-                    json=data,
-                    timeout=config["timeout"],
-                    verify=config["verify_ssl"],
-                )
-            elif method == "PUT":
-                response = requests.put(
-                    url,
-                    headers=headers,
-                    json=data,
-                    timeout=config["timeout"],
-                    verify=config["verify_ssl"],
-                )
-            elif method == "DELETE":
-                response = requests.delete(
-                    url,
-                    headers=headers,
-                    timeout=config["timeout"],
-                    verify=config["verify_ssl"],
-                )
-            else:
-                raise ValueError(f"Unsupported HTTP method: {method}")
-
-            # Log response
-            _logger.info(
-                "HKA API Response: %s - %s", response.status_code, response.text[:500]
-            )
-
             response.raise_for_status()
 
-            # Return both status code and response data
             if response.content:
                 return response.status_code, response.json()
-            else:
-                return response.status_code, {}
+            return response.status_code, {}
 
         except requests.exceptions.HTTPError as exc:
-            # Return status code even on HTTP errors
             status_code = response.status_code if "response" in locals() else None
-            error_msg = _("HKA API request failed (HTTP %s): %s") % (
-                status_code,
-                response.text[:200] if "response" in locals() else str(exc),
-            )
+            error_msg = _("HKA API request failed (HTTP %s)") % (status_code or "?")
             _logger.error(error_msg)
             raise UserError(error_msg) from exc
         except Exception as exc:
@@ -230,7 +253,8 @@ class HkaApi(models.AbstractModel):
             raise UserError(error_msg) from exc
 
     @api.model
-    def validate_ruc(self, ruc, tipo_ruc="02"):
+    @api.private
+    def validate_ruc(self, ruc, tipo_ruc="02", company=None):
         """
         Validate RUC with DGI via HKA API
 
@@ -259,7 +283,10 @@ class HkaApi(models.AbstractModel):
         try:
             _logger.info("Validating RUC %s with HKA API", ruc)
             http_status_code, response = self._make_request(
-                "api/ConsultaRucDv", method="POST", data=data
+                "api/ConsultaRucDv",
+                method="POST",
+                data=data,
+                company=company or self.env.company,
             )
 
             codigo = response.get("codigo", "")
@@ -302,7 +329,68 @@ class HkaApi(models.AbstractModel):
 
         return result
 
+    def _parse_enviar_response(self, response, move=None):
+        """Turn an HKA Enviar JSON body into the structured result Process now stores.
+
+        Code 102 (duplicate) is always a failure. HKA may still return a CUFE
+        for the already-accepted number; do not store it or mark the invoice sent.
+        """
+        response = response or {}
+        codigo = str(response.get("codigo") or "")
+        mensaje = response.get("mensaje") or ""
+        resultado = response.get("resultado") or ""
+        cufe = response.get("cufe") or False
+        payload = {
+            "dgi_cufe": cufe,
+            "dgi_qr": response.get("qr") or False,
+            "dgi_fecha_recepcion": response.get("fechaRecepcionDGI") or False,
+            "dgi_protocolo_autorizacion": response.get("nroProtocoloAutorizacion")
+            or False,
+            "codigo": codigo,
+            "mensaje": mensaje,
+        }
+        if codigo == "200":
+            if not cufe:
+                return {
+                    "success": False,
+                    "status": "Error: 200",
+                    "error_message": _(
+                        "Code: 200, Message: %(mensaje)s. HKA accepted the "
+                        "request but did not return a CUFE."
+                    )
+                    % {"mensaje": mensaje},
+                    **payload,
+                }
+            return {
+                "success": True,
+                "status": resultado or "procesado",
+                "error_message": False,
+                **payload,
+            }
+        if codigo == "102":
+            return {
+                "success": False,
+                "status": "Error: 102",
+                "error_message": _(
+                    "Code: 102, Message: %(mensaje)s"
+                ) % {
+                    "mensaje": mensaje or _("The document is duplicated"),
+                },
+                **payload,
+                "dgi_cufe": False,
+                "dgi_qr": False,
+                "dgi_fecha_recepcion": False,
+                "dgi_protocolo_autorizacion": False,
+            }
+        return {
+            "success": False,
+            "status": resultado or ("Error: %s" % codigo if codigo else "Exception"),
+            "error_message": "Code: %s, Message: %s" % (codigo, mensaje),
+            **payload,
+        }
+
     @api.model
+    @api.private
     def enviar(self, document_data, move_id=None):
         """
         Send electronic document to DGI via HKA API
@@ -345,54 +433,23 @@ class HkaApi(models.AbstractModel):
             "mensaje": "",
         }
 
+        self._check_hka_user_access()
         try:
             _logger.info("Sending electronic document to HKA API")
             http_status_code, response = self._make_request(
-                "api/Enviar", method="POST", data=document_data
+                "api/Enviar",
+                method="POST",
+                data=document_data,
+                company=self._company_from_move(move_id),
             )
 
-            # Parse response
-            codigo = response.get("codigo", "")
-            resultado = response.get("resultado", "")
-            mensaje = response.get("mensaje", "")
-
-            # Check if API returned success code
-            if codigo == "200":
-                status = "success"
-                result = {
-                    "success": True,
-                    "status": resultado,
-                    "error_message": False,
-                    "dgi_cufe": response.get("cufe", "") or False,
-                    "dgi_qr": response.get("qr", "") or False,
-                    "dgi_fecha_recepcion": response.get("fechaRecepcionDGI", "")
-                    or False,
-                    "dgi_protocolo_autorizacion": response.get(
-                        "nroProtocoloAutorizacion", ""
-                    )
-                    or False,
-                    "codigo": codigo,
-                    "mensaje": mensaje,
-                }
-            else:
-                # API returned error code
-                status = "error"
-                error_message = f"Code: {codigo}, Message: {mensaje}"
-                result = {
-                    "success": False,
-                    "status": resultado or f"Error: {codigo}",
-                    "error_message": error_message,
-                    "dgi_cufe": response.get("cufe", "") or False,
-                    "dgi_qr": response.get("qr", "") or False,
-                    "dgi_fecha_recepcion": response.get("fechaRecepcionDGI", "")
-                    or False,
-                    "dgi_protocolo_autorizacion": response.get(
-                        "nroProtocoloAutorizacion", ""
-                    )
-                    or False,
-                    "codigo": codigo,
-                    "mensaje": mensaje,
-                }
+            move = self.env["account.move"].browse(move_id) if move_id else None
+            parsed = self._parse_enviar_response(
+                response, move=move if move and move.exists() else None
+            )
+            status = "success" if parsed["success"] else "error"
+            error_message = parsed["error_message"] or None
+            result = parsed
 
         except Exception as exc:
             _logger.exception("Failed to send electronic document")
@@ -421,11 +478,13 @@ class HkaApi(models.AbstractModel):
                 http_status_code=http_status_code,
                 duration_ms=duration,
                 move_id=move_id,
+                auto_commit=False,
             )
 
         return result
 
     @api.model
+    @api.private
     def anular(self, anulacion_data, move_id=None):
         """
         Cancel electronic invoice in DGI via HKA API
@@ -472,10 +531,14 @@ class HkaApi(models.AbstractModel):
             "mensaje": "",
         }
 
+        self._check_hka_user_access()
         try:
             _logger.info("Canceling electronic document via HKA API")
             http_status_code, response = self._make_request(
-                "api/Anulacion", method="POST", data=anulacion_data
+                "api/Anulacion",
+                method="POST",
+                data=anulacion_data,
+                company=self._company_from_move(move_id),
             )
 
             # Parse response
@@ -528,11 +591,22 @@ class HkaApi(models.AbstractModel):
                 http_status_code=http_status_code,
                 duration_ms=duration,
                 move_id=move_id,
+                auto_commit=False,
             )
 
         return result
 
     @api.model
+    @api.private
+    def _descargar_file_name(self, numero_documento, tipo_archivo):
+        """HKA tipoArchivo is PDF/XML; Odoo adds the mimetype suffix, so keep one lowercase ext."""
+        ext = (tipo_archivo or "pdf").strip().lstrip(".").lower()
+        if ext not in ("pdf", "xml"):
+            ext = "pdf"
+        return "%s.%s" % (numero_documento, ext)
+
+    @api.model
+    @api.private
     def descargar(self, cufe, numero_documento, tipo_archivo="pdf", move_id=None):
         """
         Download electronic invoice from DGI via HKA API
@@ -566,17 +640,22 @@ class HkaApi(models.AbstractModel):
             "tipoArchivo": tipo_archivo.upper(),
         }
 
+        file_name = self._descargar_file_name(numero_documento, tipo_archivo)
         result = {
             "success": False,
             "file_content": False,
-            "file_name": f"{numero_documento}.{tipo_archivo}",
+            "file_name": file_name,
             "error_message": False,
         }
 
+        self._check_hka_user_access()
         try:
             _logger.info("Downloading e-invoice from HKA API: %s", numero_documento)
             http_status_code, response = self._make_request(
-                "api/Descarga", method="POST", data=data
+                "api/Descarga",
+                method="POST",
+                data=data,
+                company=self._company_from_move(move_id),
             )
 
             # Check if download was successful
@@ -592,7 +671,7 @@ class HkaApi(models.AbstractModel):
                     result = {
                         "success": True,
                         "file_content": base64.b64decode(file_content),
-                        "file_name": f"{numero_documento}.{tipo_archivo}",
+                        "file_name": file_name,
                         "error_message": False,
                     }
                 else:
@@ -614,15 +693,20 @@ class HkaApi(models.AbstractModel):
         finally:
             # Log API call (automatically uses new cursor to survive transaction rollback)
             duration = (time.time() - start_time) * 1000  # Convert to ms
+            logged_response = response
+            if isinstance(response, dict) and response.get("Archivo"):
+                logged_response = dict(response)
+                logged_response["Archivo"] = "***"
             self.env["hka.api.log"].log_api_call(
                 api_method="descarga",
                 request_data=data,
-                response_data=response,
+                response_data=logged_response,
                 status=status,
                 error_message=error_message,
                 http_status_code=http_status_code,
                 duration_ms=duration,
                 move_id=move_id,
+                auto_commit=False,
             )
 
         return result

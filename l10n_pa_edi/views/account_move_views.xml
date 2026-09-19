@@ -4,23 +4,24 @@
         <field name="name">account.move.form.dgi</field>
         <field name="model">account.move</field>
         <field name="inherit_id" ref="account.view_move_form" />
+        <field name="priority">20</field>
         <field name="arch" type="xml">
             <!-- Make form readonly when canceled in DGI -->
             <xpath expr="//form" position="attributes">
                 <attribute name="readonly">dgi_status == 'anulado'</attribute>
             </xpath>
 
-            <!-- Add Send to DGI button in header (only show if auto-send is disabled) -->
             <xpath expr="//form/header" position="inside">
-                <button name="action_send_to_dgi" string="Send to DGI" type="object" class="btn-primary"
-                        invisible="state != 'posted' or dgi_sent or move_type not in ('out_invoice', 'out_refund') or journal_id.dgi_auto_send_on_post"
-                        help="Send electronic invoice to DGI Panama manually" />
-
                 <button name="action_download_efactura" string="Download E-Factura (PDF)" type="object"
                         class="btn-secondary" invisible="dgi_status != 'procesado'"
                         help="Download the electronic invoice PDF from DGI" />
                 <button name="action_download_efactura_xml" string="Download XML" type="object" class="btn-secondary"
                         invisible="dgi_status != 'procesado'" help="Download the electronic invoice XML from DGI" />
+            </xpath>
+
+            <!-- Use standard Request Cancel; HKA motivo is collected there. -->
+            <xpath expr="//button[@name='button_cancel_posted_moves']" position="attributes">
+                <attribute name="invisible">1</attribute>
             </xpath>
 
             <!-- Hide credit note button when invoice is sent to DGI -->
@@ -46,6 +47,7 @@
             <!-- Add DGI API Logs smart button -->
             <xpath expr="//div[@name='button_box']" position="inside">
                 <button name="action_view_hka_api_logs" type="object" class="oe_stat_button" icon="fa-list"
+                        groups="account.group_account_manager"
                         invisible="not hka_api_log_count">
                     <field name="hka_api_log_count" widget="statinfo" string="DGI Logs" />
                 </button>
@@ -59,21 +61,56 @@
 
                     <group string="Document Settings">
                         <group>
-                            <field name="hka_tipo_emision" />
-                            <field name="hka_tipo_documento" />
+                            <field name="hka_allowed_document_types" invisible="1" />
+                            <field name="hka_allowed_naturalezas" invisible="1" />
+                            <field name="hka_allowed_destinos" invisible="1" />
+                            <field name="hka_allowed_operation_types" invisible="1" />
+                            <field name="hka_allowed_entrega_cafe" invisible="1" />
+                            <field name="hka_is_sale_document" invisible="1" />
+                            <field name="hka_requires_contingency" invisible="1" />
+                            <field name="hka_tipo_emision" readonly="dgi_sent" />
+                            <field name="hka_fecha_inicio_contingencia"
+                                   invisible="not hka_requires_contingency"
+                                   required="hka_requires_contingency"
+                                   readonly="dgi_sent" />
+                            <field name="hka_motivo_contingencia"
+                                   invisible="not hka_requires_contingency"
+                                   required="hka_requires_contingency"
+                                   readonly="dgi_sent"
+                                   placeholder="At least 15 characters" />
+                            <field name="hka_tipo_documento" widget="hka_filtered_selection"
+                                   options="{'allowed_field': 'hka_allowed_document_types'}"
+                                   readonly="dgi_sent" />
                             <field name="hka_tipo_documento_manual"
+                                   readonly="dgi_sent"
                                    help="If checked, the document type will not be auto-computed based on invoice type. Uncheck to enable auto-computation." />
-                            <field name="hka_naturaleza_operacion" />
-                            <field name="hka_tipo_operacion" />
-                            <field name="hka_destino_operacion" />
-                            <field name="hka_forma_pago" />
+                            <field name="hka_naturaleza_operacion" widget="hka_filtered_selection"
+                                   options="{'allowed_field': 'hka_allowed_naturalezas'}"
+                                   readonly="dgi_sent" />
+                            <field name="hka_tipo_operacion" widget="hka_filtered_selection"
+                                   options="{'allowed_field': 'hka_allowed_operation_types'}"
+                                   readonly="dgi_sent" />
+                            <field name="hka_destino_operacion" widget="hka_filtered_selection"
+                                   options="{'allowed_field': 'hka_allowed_destinos'}"
+                                   readonly="dgi_sent" />
+                            <field name="hka_forma_pago" readonly="dgi_sent" />
+                            <field name="hka_desc_forma_pago"
+                                   invisible="hka_forma_pago != '99'"
+                                   required="hka_forma_pago == '99'"
+                                   readonly="dgi_sent" />
+                            <field name="hka_tipo_venta" invisible="not hka_is_sale_document"
+                                   required="hka_is_sale_document"
+                                   readonly="dgi_sent" />
+                            <field name="hka_merge_same_dgi_code" readonly="dgi_sent" />
                         </group>
                         <group>
-                            <field name="hka_tipo_sucursal" />
-                            <field name="hka_formato_cafe" />
-                            <field name="hka_entrega_cafe" />
-                            <field name="hka_envio_contenedor" />
-                            <field name="hka_proceso_generacion" />
+                            <field name="hka_tipo_sucursal" readonly="dgi_sent" />
+                            <field name="hka_formato_cafe" readonly="dgi_sent" />
+                            <field name="hka_entrega_cafe" widget="hka_filtered_selection"
+                                   options="{'allowed_field': 'hka_allowed_entrega_cafe'}"
+                                   readonly="dgi_sent" />
+                            <field name="hka_envio_contenedor" readonly="dgi_sent" />
+                            <field name="hka_proceso_generacion" readonly="dgi_sent" />
                         </group>
                     </group>
 
@@ -97,7 +134,8 @@
                         <field name="dgi_error_message" widget="text" readonly="1" />
                     </group>
 
-                    <div class="alert alert-success" role="alert" invisible="not dgi_sent">
+                    <div class="alert alert-success" role="alert"
+                         invisible="not dgi_sent or dgi_status == 'anulado'">
                         <p><strong>✓ Document Sent Successfully</strong></p>
                         <p>This document has been successfully sent to DGI Panama.</p>
                         <p>CUFE:
@@ -105,9 +143,15 @@
                         </p>
                     </div>
 
+                    <div class="alert alert-warning" role="alert"
+                         invisible="dgi_status != 'anulado'">
+                        <p><strong>Canceled in DGI</strong></p>
+                        <p>This document was canceled (anulado) in DGI Panama and cannot be modified.</p>
+                    </div>
+
                     <div class="alert alert-info" role="alert" invisible="dgi_sent or state != 'posted'">
                         <p><strong>Ready to Send</strong></p>
-                        <p>Click the "Send to DGI" button to transmit this invoice to DGI Panama.</p>
+                        <p>This invoice is queued for DGI. Use Process now or wait for the electronic invoicing cron.</p>
                     </div>
 
                     <div class="alert alert-warning" role="alert" invisible="state == 'posted'">

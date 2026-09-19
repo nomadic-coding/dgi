@@ -18,8 +18,8 @@ Features:
 
 This module can be used independently or with l10n_pa_edi for electronic invoicing.
     """,
-    "author": "Your Company",
-    "website": "https://www.yourcompany.com",
+    "author": "STARK LABS",
+    "website": "https://www.starklabspanama.com",
     "depends": [
         "account",
         "product",
@@ -35,6 +35,7 @@ This module can be used independently or with l10n_pa_edi for electronic invoici
         "views/res_currency_views.xml",
         "views/uom_uom_views.xml",
     ],
+    "post_init_hook": "post_init_hook",
     "installable": True,
     "application": False,
     "auto_install": False,
