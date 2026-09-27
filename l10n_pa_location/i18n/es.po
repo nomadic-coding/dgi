@@ -1,0 +1,22 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* l10n_pa_location
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 18.0\n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#. module: l10n_pa_location
+#: model:ir.model.fields,field_description:l10n_pa_location.field_res_country_state__district_count
+msgid "Number of Districts"
+msgstr "Número de distritos"
+
+#. module: l10n_pa_location
+#: model:ir.model.fields,field_description:l10n_pa_location.field_l10n_pa_distrito__name
+msgid "Name"
+msgstr "Nombre"

@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <function model="l10n_pa_edi.hka_api" name="_auto_map_defaults"/>
+</odoo>

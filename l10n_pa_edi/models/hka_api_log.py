@@ -102,6 +102,38 @@ class HkaApiLog(models.Model):
             move_ref = log.move_id.name if log.move_id else "N/A"
             log.display_name = f"{method_name} - {move_ref}"
 
+    SENSITIVE_KEYS = frozenset({
+        "clave",
+        "password",
+        "token",
+        "access_token",
+        "authtoken",
+        "jwt",
+        "authorization",
+        "usuario",
+        "archivo",
+        "file_content",
+        "auth_token",
+        "hka_clave",
+        "hka_usuario",
+        "hka_auth_token",
+    })
+
+    @api.model
+    def _redact_payload(self, data):
+        """Strip credentials from stored request/response JSON."""
+        if isinstance(data, dict):
+            redacted = {}
+            for key, value in data.items():
+                if str(key).lower() in self.SENSITIVE_KEYS:
+                    redacted[key] = "***"
+                else:
+                    redacted[key] = self._redact_payload(value)
+            return redacted
+        if isinstance(data, list):
+            return [self._redact_payload(item) for item in data]
+        return data
+
     def log_api_call(
         self,
         api_method,
@@ -143,38 +175,41 @@ class HkaApiLog(models.Model):
             "http_status_code": http_status_code,
             "duration_ms": duration_ms,
             "move_id": move_id,
+            "company_id": self.env.company.id,
         }
+        if move_id:
+            move = self.env["account.move"].browse(move_id)
+            if move.exists() and move.company_id:
+                values["company_id"] = move.company_id.id
 
-        # Convert dicts to JSON strings
         if request_data:
             values["request_data"] = json.dumps(
-                request_data, indent=2, ensure_ascii=False
+                self._redact_payload(request_data), indent=2, ensure_ascii=False
             )
 
         if response_data:
             values["response_data"] = json.dumps(
-                response_data, indent=2, ensure_ascii=False
+                self._redact_payload(response_data), indent=2, ensure_ascii=False
             )
 
         if error_message:
-            values["error_message"] = str(error_message)
+            values["error_message"] = str(
+                self._redact_payload({"error": str(error_message)}).get("error")
+            )
 
         # Use a new cursor to ensure the log is committed
         # even if the main transaction is rolled back
         if auto_commit:
+            # Never attach move_id on a side cursor: the FK waits on the Enviar
+            # invoice lock and Process now then reports "another process already".
+            values.pop("move_id", None)
             try:
                 with self.env.registry.cursor() as new_cr:
                     new_env = api.Environment(new_cr, self.env.uid, self.env.context)
-                    log_record = new_env["hka.api.log"].create(values)
+                    new_env["hka.api.log"].sudo().create(values)
                     new_cr.commit()
-                    _logger.debug(
-                        "API log created with auto-commit: %s", log_record.display_name
-                    )
-                    return None  # Can't return the record from a different cursor
+                    return None
             except Exception as exc:
-                # If logging fails, just log it but don't interrupt the main flow
                 _logger.error("Failed to create API log entry: %s", exc)
                 return None
-        else:
-            # Use current transaction (for cases where caller manages transaction)
-            return self.create(values)
+        return self.sudo().create(values)

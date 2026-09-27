@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="edi_format_pa_dgi_hka" model="account.edi.format">
+        <field name="name">Panama DGI (HKA)</field>
+        <field name="code">pa_dgi_hka</field>
+    </record>
+</odoo>

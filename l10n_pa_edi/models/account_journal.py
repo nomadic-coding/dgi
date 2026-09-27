@@ -18,13 +18,6 @@ class AccountJournal(models.Model):
         help="Enable electronic invoicing for Panama DGI",
     )
 
-    dgi_auto_send_on_post = fields.Boolean(
-        string="Auto-Send to DGI on Confirm",
-        default=False,
-        help="Automatically send invoices to DGI when they are confirmed/posted. "
-        "If disabled, invoices must be sent manually using the 'Send to DGI' button.",
-    )
-
     dgi_codigo_sucursal_emisor = fields.Char(
         string="Branch Code",
         size=4,
@@ -65,40 +58,44 @@ class AccountJournal(models.Model):
             self._validate_fiscal_point(journal)
             self._validate_dgi_sequence(journal)
 
-    @api.constrains("dgi_codigo_sucursal_emisor")
-    def _check_codigo_sucursal_unique(self):
-        """Ensure branch code is unique per company."""
+    @api.depends(
+        "type",
+        "company_id",
+        "company_id.account_fiscal_country_id",
+        "use_dgi_electronic_invoicing",
+    )
+    def _compute_compatible_edi_ids(self):
+        return super()._compute_compatible_edi_ids()
+
+    @api.depends(
+        "type",
+        "company_id",
+        "company_id.account_fiscal_country_id",
+        "use_dgi_electronic_invoicing",
+    )
+    def _compute_edi_format_ids(self):
+        return super()._compute_edi_format_ids()
+
+    @api.constrains("company_id", "dgi_codigo_sucursal_emisor", "dgi_punto_facturacion_fiscal")
+    def _check_sucursal_punto_unique(self):
+        """DGI uniqueness is sucursal + punto (+ número), not punto alone."""
         for journal in self:
-            if not journal.dgi_codigo_sucursal_emisor:
+            if (
+                not journal.dgi_codigo_sucursal_emisor
+                or not journal.dgi_punto_facturacion_fiscal
+            ):
                 continue
 
-            existing = self._find_duplicate_branch_code(journal)
+            existing = self._find_duplicate_sucursal_punto(journal)
             if existing:
                 raise ValidationError(
                     _(
-                        "Branch code '%(code)s' is already used by journal '%(journal)s'."
+                        "Branch '%(branch)s' with fiscal point '%(point)s' is already "
+                        "used by journal '%(journal)s'."
                     )
                     % {
-                        "code": journal.dgi_codigo_sucursal_emisor,
-                        "journal": existing.name,
-                    }
-                )
-
-    @api.constrains("dgi_punto_facturacion_fiscal")
-    def _check_punto_facturacion_fiscal_unique(self):
-        """Ensure fiscal point is unique per company."""
-        for journal in self:
-            if not journal.dgi_punto_facturacion_fiscal:
-                continue
-
-            existing = self._find_duplicate_fiscal_point(journal)
-            if existing:
-                raise ValidationError(
-                    _(
-                        "Fiscal point '%(code)s' is already used by journal '%(journal)s'."
-                    )
-                    % {
-                        "code": journal.dgi_punto_facturacion_fiscal,
+                        "branch": journal.dgi_codigo_sucursal_emisor,
+                        "point": journal.dgi_punto_facturacion_fiscal,
                         "journal": existing.name,
                     }
                 )
@@ -127,6 +124,10 @@ class AccountJournal(models.Model):
                 )
                 % {"length": self.DGI_FISCAL_POINT_LENGTH, "value": code or ""}
             )
+        if int(code) == 0:
+            raise ValidationError(
+                _("Fiscal point cannot be zero. Use a value from 001 to 999.")
+            )
 
     def _validate_dgi_sequence(self, journal):
         """Validate that DGI sequence is configured."""
@@ -143,23 +144,13 @@ class AccountJournal(models.Model):
         """Check if code is a numeric string with the expected length."""
         return code and len(code) == expected_length and code.isdigit()
 
-    def _find_duplicate_branch_code(self, journal):
-        """Find another journal with the same branch code in the same company."""
+    def _find_duplicate_sucursal_punto(self, journal):
+        """Find another journal with the same company + sucursal + punto."""
         return self.search(
             [
                 ("id", "!=", journal.id),
                 ("company_id", "=", journal.company_id.id),
                 ("dgi_codigo_sucursal_emisor", "=", journal.dgi_codigo_sucursal_emisor),
-            ],
-            limit=1,
-        )
-
-    def _find_duplicate_fiscal_point(self, journal):
-        """Find another journal with the same fiscal point in the same company."""
-        return self.search(
-            [
-                ("id", "!=", journal.id),
-                ("company_id", "=", journal.company_id.id),
                 (
                     "dgi_punto_facturacion_fiscal",
                     "=",

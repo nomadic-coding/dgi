@@ -1,0 +1,22 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* l10n_pa_dgi_code_mapping
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 18.0\n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#. module: l10n_pa_dgi_code_mapping
+#: model:ir.model,name:l10n_pa_dgi_code_mapping.model_dgi_code_mapping
+msgid "Panama DGI Code Mapping"
+msgstr "Mapeo de códigos DGI de Panamá"
+
+#. module: l10n_pa_dgi_code_mapping
+#: model:ir.model.fields,field_description:l10n_pa_dgi_code_mapping.field_dgi_code_mapping__mapping_type
+msgid "Mapping Type"
+msgstr "Tipo de mapeo"
