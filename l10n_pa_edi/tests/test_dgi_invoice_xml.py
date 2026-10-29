@@ -6,7 +6,7 @@ from odoo import Command
 from odoo.exceptions import UserError
 from odoo.tests import tagged
 
-from .common import L10nPaEdiTestCommon
+from .common import FIXTURE_CUFE_66, L10nPaEdiTestCommon
 
 
 @tagged("post_install_l10n", "post_install", "-at_install")
@@ -98,7 +98,7 @@ class TestL10nPaEdiInvoiceXml(L10nPaEdiTestCommon):
 
     def test_credit_note_matches_xml(self):
         invoice = self._create_dgi_invoice(partner=self.partner_contribuyente)
-        self._mark_dgi_sent(invoice, dgi_cufe="TEST-CUFE-001")
+        self._mark_dgi_sent(invoice, dgi_cufe=FIXTURE_CUFE_66)
 
         credit_note = self._create_dgi_invoice(
             partner=self.partner_contribuyente,
@@ -126,9 +126,28 @@ class TestL10nPaEdiInvoiceXml(L10nPaEdiTestCommon):
             credit_note._validate_before_send_to_dgi()
         self.assertIn("66", error.exception.args[0])
 
-        self._mark_dgi_sent(invoice, dgi_cufe="A" * 66)
+        self._mark_dgi_sent(invoice, dgi_cufe=FIXTURE_CUFE_66)
         credit_note.invalidate_recordset()
         credit_note._validate_before_send_to_dgi()
+
+    def test_credit_note_prepare_requires_66_char_referenced_cufe(self):
+        invoice = self._create_dgi_invoice(partner=self.partner_contribuyente)
+        self._mark_dgi_sent(invoice, dgi_cufe="TEST-CUFE-001")
+        credit_note = self._create_dgi_invoice(
+            partner=self.partner_contribuyente,
+            invoice_date="2026-03-20",
+            move_type="out_refund",
+            reversed_entry=invoice,
+        )
+        with self.assertRaises(UserError) as error:
+            credit_note._prepare_dgi_document_data()
+        self.assertIn("66", error.exception.args[0])
+
+        self._mark_dgi_sent(invoice, dgi_cufe=FIXTURE_CUFE_66)
+        credit_note.invalidate_recordset()
+        payload = credit_note._prepare_dgi_document_data()
+        referenced = payload["documento"]["datosTransaccion"]["listaDocsFiscalReferenciados"]
+        self.assertEqual(referenced[0]["cufeFEReferenciada"], FIXTURE_CUFE_66)
 
     def test_generic_credit_note_send_does_not_require_referenced_cufe(self):
         refund = self._create_dgi_invoice(
@@ -347,6 +366,35 @@ class TestL10nPaEdiInvoiceXml(L10nPaEdiTestCommon):
         with self.assertRaises(UserError) as error:
             invoice._validate_before_send_to_dgi()
         self.assertIn("due date", error.exception.args[0])
+
+    def test_credit_payment_due_date_is_required_at_post(self):
+        invoice = self._create_dgi_invoice(
+            partner=self.partner_contribuyente,
+            post=False,
+            extra_vals={"hka_forma_pago": "01"},
+        )
+        invoice.line_ids.filtered(
+            lambda line: line.display_type == "payment_term"
+        ).date_maturity = False
+        invoice.invoice_date_due = False
+        with self.assertRaises(UserError) as error:
+            invoice.action_post()
+        self.assertIn("due date", error.exception.args[0])
+        self.assertEqual(invoice.state, "draft")
+
+    def test_credit_payment_with_due_date_posts_without_enviar(self):
+        with patch.object(
+            type(self.env["l10n_pa_edi.hka_api"]),
+            "enviar",
+        ) as enviar:
+            invoice = self._create_dgi_invoice(
+                partner=self.partner_contribuyente,
+                extra_vals={"hka_forma_pago": "01"},
+            )
+        self.assertEqual(invoice.state, "posted")
+        self.assertTrue(invoice.invoice_date_due)
+        self.assertEqual(invoice.edi_state, "to_send")
+        enviar.assert_not_called()
 
     def test_sale_downpayment_is_deducted_in_hka_payload(self):
         """Final invoice after a down payment must send the net remainder, not the gross sale."""

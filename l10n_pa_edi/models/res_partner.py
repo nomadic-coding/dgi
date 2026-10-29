@@ -132,8 +132,37 @@ class ResPartner(models.Model):
         vals_list = [self._prepare_ruc_validation_vals(vals) for vals in vals_list]
         return super().create(vals_list)
 
+    # Changing any of these invalidates a DGI ConsultaRucDv result.
+    DGI_RUC_VALIDATION_SOURCE_FIELDS = ("vat", "dgi_ruc", "dgi_tipo_ruc")
+
+    def _dgi_partners_losing_ruc_validation(self, vals):
+        """Validated partners whose RUC identity is about to change."""
+        changed_fields = [
+            name for name in self.DGI_RUC_VALIDATION_SOURCE_FIELDS if name in vals
+        ]
+        if not changed_fields:
+            return self.browse()
+
+        def _norm(value):
+            return (value or "").strip() if isinstance(value, str) else (value or "")
+
+        return self.filtered(
+            lambda partner: partner.dgi_ruc_validated
+            and any(_norm(partner[name]) != _norm(vals[name]) for name in changed_fields)
+        )
+
     def write(self, vals):
-        return super().write(self._prepare_ruc_validation_vals(vals))
+        vals = self._prepare_ruc_validation_vals(vals)
+        losing_validation = self._dgi_partners_losing_ruc_validation(vals)
+        res = super().write(vals)
+        if losing_validation:
+            # The stored RUC no longer matches what DGI confirmed: back to
+            # Consumidor Final until ConsultaRucDv is run again.
+            super(ResPartner, losing_validation).write({
+                "dgi_ruc_validated": False,
+                "dgi_ruc_validation_date": False,
+            })
+        return res
 
     @api.private
     def _dgi_set_ruc_validated(self, extra_vals=None):
@@ -143,7 +172,9 @@ class ResPartner(models.Model):
         vals.setdefault("dgi_ruc_validation_date", fields.Datetime.now())
         return super().write(vals)
 
-    @api.depends("dgi_ruc_validated", "dgi_tipo_ruc", "country_id", "country_id.code")
+    @api.depends(
+        "dgi_ruc_validated", "dgi_tipo_ruc", "vat", "country_id", "country_id.code"
+    )
     def _compute_tipo_cliente_fe(self):
         """
         Compute tipoClienteFE based on RUC validation and country.
@@ -193,6 +224,8 @@ class ResPartner(models.Model):
 
         if self.dgi_tipo_cliente_fe in ["01", "03"]:
             # Taxpayer or Government - RUC, DV, razón social, address, location required
+            if self.dgi_tipo_cliente_fe == "03" and not self.dgi_ruc_validated:
+                missing_fields.append("RUC validated with DGI (ConsultaRucDv)")
             if not self.vat:
                 missing_fields.append("RUC")
             if not self.dgi_dv:
@@ -233,17 +266,19 @@ class ResPartner(models.Model):
         if not self.dgi_ruc:
             raise UserError(_("Please enter a RUC number first"))
 
-        if self.dgi_tipo_ruc not in ["01", "02"]:
+        if self.dgi_tipo_ruc not in ["01", "02", "03"]:
             raise UserError(
                 _(
-                    "Please select a valid Tipo RUC (01=Natural Person, 02=Juridical Person)"
+                    "Please select a valid Tipo RUC "
+                    "(01=Natural Person, 02=Juridical Person, 03=Government)"
                 )
             )
 
         hka_api = self.env["l10n_pa_edi.hka_api"]
+        consult_tipo = "02" if self.dgi_tipo_ruc == "03" else self.dgi_tipo_ruc
         result = hka_api.validate_ruc(
             self.dgi_ruc,
-            self.dgi_tipo_ruc,
+            consult_tipo,
             company=self.company_id or self.env.company,
         )
 
@@ -256,7 +291,7 @@ class ResPartner(models.Model):
         vals = {"vat": self.dgi_ruc}
         if result.get("dv"):
             vals["dgi_dv"] = result.get("dv")
-        if result.get("tipo_ruc"):
+        if result.get("tipo_ruc") and self.dgi_tipo_ruc != "03":
             tipo_ruc_raw = result.get("tipo_ruc")
             if tipo_ruc_raw and len(str(tipo_ruc_raw)) != 2:
                 tipo_ruc_raw = str(tipo_ruc_raw).zfill(2)

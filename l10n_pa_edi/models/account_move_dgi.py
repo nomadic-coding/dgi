@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import base64
+
 from odoo import _, fields, models
 from odoo.exceptions import UserError
 
@@ -28,6 +30,12 @@ class AccountMoveDgi(models.Model):
     def _dgi_hka_tax_mapping_errors(self, tax):
         return self.env["l10n.pa.edi.payload"]._dgi_hka_tax_mapping_errors(tax)
 
+    def _dgi_credit_payment_errors(self):
+        return self.env["l10n.pa.edi.payload"]._dgi_credit_payment_errors(self)
+
+    def _check_dgi_credit_payment(self):
+        return self.env["l10n.pa.edi.payload"]._check_dgi_credit_payment(self)
+
     def _l10n_pa_hka_edi_documents(self):
         return self.edi_document_ids.filtered(
             lambda doc: doc.edi_format_id.code == "pa_dgi_hka"
@@ -41,7 +49,7 @@ class AccountMoveDgi(models.Model):
         # document, and an exclusive lock deadlocks the independent HKA log /
         # CUFE cursors that insert against this row.
         self.invalidate_recordset(["dgi_status", "dgi_cufe"])
-        if self.dgi_cufe and self.dgi_status in ("procesado", "anulado"):
+        if self.dgi_cufe and self._dgi_status_is("procesado", "anulado"):
             raise UserError(_("This document has already been sent to DGI"))
 
         hka_api = self.env["l10n_pa_edi.hka_api"]
@@ -58,11 +66,11 @@ class AccountMoveDgi(models.Model):
 
         fields_to_write = {
             "dgi_status": result["status"],
-            "dgi_sent_date": fields.Datetime.now(),
             "dgi_error_message": result["error_message"],
         }
         if result["success"]:
             fields_to_write.update({
+                "dgi_sent_date": fields.Datetime.now(),
                 "dgi_cufe": result["dgi_cufe"],
                 "dgi_qr": result["dgi_qr"],
                 "dgi_fecha_recepcion": result["dgi_fecha_recepcion"],
@@ -90,16 +98,16 @@ class AccountMoveDgi(models.Model):
 
     def _need_cancel_request(self):
         """Block direct cancel of a procesado e-factura; allow it after DGI anulación."""
-        if self.dgi_status == "anulado":
+        if self._dgi_status_is("anulado"):
             return False
-        if self.dgi_status == "procesado" and self.dgi_sent:
+        if self._dgi_status_is("procesado") and self.dgi_sent:
             return True
         return super()._need_cancel_request()
 
     def button_request_cancel(self):
         """Override to open DGI cancellation wizard when invoice is sent to DGI"""
         # If invoice is sent to DGI, use DGI cancellation wizard
-        if self.dgi_sent and self.dgi_status == "procesado":
+        if self.dgi_sent and self._dgi_status_is("procesado"):
             return self.action_cancel_dgi()
         return super().button_request_cancel()
 
@@ -135,7 +143,7 @@ class AccountMoveDgi(models.Model):
     def button_cancel_posted_moves(self):
         """Collect the HKA motivo before requesting EDI cancellation."""
         dgi_moves = self.filtered(
-            lambda move: move.dgi_sent and move.dgi_status == "procesado"
+            lambda move: move.dgi_sent and move._dgi_status_is("procesado")
         )
         if dgi_moves:
             if len(self) > 1:
@@ -147,7 +155,7 @@ class AccountMoveDgi(models.Model):
 
     def button_force_cancel(self):
         for move in self:
-            if move.dgi_sent and move.dgi_status == "procesado":
+            if move.dgi_sent and move._dgi_status_is("procesado"):
                 raise UserError(
                     _(
                         "Cannot cancel: Invoice %s is processed in DGI. "
@@ -175,7 +183,7 @@ class AccountMoveDgi(models.Model):
     def button_cancel(self):
         """Block cancel of a live DGI invoice; allow Odoo cancel after DGI anulación."""
         for move in self:
-            if move.dgi_sent and move.dgi_status == "procesado":
+            if move.dgi_sent and move._dgi_status_is("procesado"):
                 raise UserError(
                     _(
                         "Cannot cancel: Invoice %s is processed in DGI. "
@@ -197,8 +205,12 @@ class AccountMoveDgi(models.Model):
                 )
         return super().action_reverse()
 
-    def action_download_efactura(self):
-        """Download E-Factura PDF from DGI"""
+    def _dgi_download_efactura_file(self, tipo_archivo, mimetype):
+        """Fetch the CAFE PDF/XML from HKA and return a download action.
+
+        The file is stored once per invoice and file name; repeated clicks
+        refresh that attachment instead of piling up duplicates.
+        """
         self.ensure_one()
 
         if not self.dgi_cufe:
@@ -209,87 +221,60 @@ class AccountMoveDgi(models.Model):
                 _("Cannot download e-factura: Document number not available")
             )
 
-        # Call HKA API to download the PDF
         hka_api = self.env["l10n_pa_edi.hka_api"]
         result = hka_api.descargar(
             cufe=self.dgi_cufe,
             numero_documento=self.name,
-            tipo_archivo="PDF",
+            tipo_archivo=tipo_archivo,
             move_id=self.id,
         )
 
-        if result["success"]:
-            # Create attachment and trigger download
-            import base64
-
-            attachment = self.env["ir.attachment"].create(
-                {
-                    "name": result["file_name"],
-                    "datas": base64.b64encode(result["file_content"]),
-                    "res_model": "account.move",
-                    "res_id": self.id,
-                    "mimetype": "application/pdf",
-                }
-            )
-
-            return {
-                "type": "ir.actions.act_url",
-                "url": f"/web/content/{attachment.id}?download=true",
-                "target": "self",
-            }
-        else:
+        if not result["success"]:
             raise UserError(
-                _("Failed to download e-factura: %s") % result["error_message"]
+                _("Failed to download e-factura %(type)s: %(error)s")
+                % {"type": tipo_archivo, "error": result["error_message"]}
             )
+
+        Attachment = self.env["ir.attachment"]
+        values = {
+            "name": result["file_name"],
+            "datas": base64.b64encode(result["file_content"]),
+            "res_model": "account.move",
+            "res_id": self.id,
+            "mimetype": mimetype,
+        }
+        attachment = Attachment.search(
+            [
+                ("res_model", "=", "account.move"),
+                ("res_id", "=", self.id),
+                ("name", "=", result["file_name"]),
+            ],
+            order="id desc",
+            limit=1,
+        )
+        if attachment:
+            attachment.write(values)
+        else:
+            attachment = Attachment.create(values)
+
+        return {
+            "type": "ir.actions.act_url",
+            "url": f"/web/content/{attachment.id}?download=true",
+            "target": "self",
+        }
+
+    def action_download_efactura(self):
+        """Download E-Factura PDF from DGI"""
+        return self._dgi_download_efactura_file("PDF", "application/pdf")
 
     def action_download_efactura_xml(self):
         """Download E-Factura XML from DGI"""
-        self.ensure_one()
-
-        if not self.dgi_cufe:
-            raise UserError(_("Cannot download e-factura: CUFE not available"))
-
-        if not self.name:
-            raise UserError(
-                _("Cannot download e-factura: Document number not available")
-            )
-
-        # Call HKA API to download the XML
-        hka_api = self.env["l10n_pa_edi.hka_api"]
-        result = hka_api.descargar(
-            cufe=self.dgi_cufe,
-            numero_documento=self.name,
-            tipo_archivo="XML",
-            move_id=self.id,
-        )
-
-        if result["success"]:
-            # Create attachment and trigger download
-            import base64
-
-            attachment = self.env["ir.attachment"].create(
-                {
-                    "name": result["file_name"],
-                    "datas": base64.b64encode(result["file_content"]),
-                    "res_model": "account.move",
-                    "res_id": self.id,
-                    "mimetype": "application/xml",
-                }
-            )
-
-            return {
-                "type": "ir.actions.act_url",
-                "url": f"/web/content/{attachment.id}?download=true",
-                "target": "self",
-            }
-        else:
-            raise UserError(
-                _("Failed to download e-factura XML: %s") % result["error_message"]
-            )
+        return self._dgi_download_efactura_file("XML", "application/xml")
 
     def _post(self, soft=True):
         for move in self.filtered(lambda move: move._dgi_requires_product_line_taxes()):
             move._check_dgi_product_line_taxes()
+            move._check_dgi_credit_payment()
         return super()._post(soft=soft)
 
     def _set_next_sequence(self):
@@ -349,10 +334,10 @@ class AccountMoveDgi(models.Model):
             raise UserError(_("Only accounting managers can open HKA API logs."))
         return {
             "type": "ir.actions.act_window",
-            "name": "HKA API Logs",
+            "name": _("HKA API Logs"),
             "res_model": "hka.api.log",
             "view_mode": "list,form",
-            "domain": [("move_id", "=", self.id)],
+            "domain": self._hka_api_log_domain(),
             "context": {"default_move_id": self.id},
         }
 

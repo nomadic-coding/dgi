@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from odoo import _, api, fields, models
-from odoo.exceptions import AccessError, UserError
+from odoo.exceptions import AccessError, UserError, ValidationError
 from odoo.tools.mail import html2plaintext
 
 
@@ -56,7 +56,7 @@ class DgiAnulacionWizard(models.TransientModel):
             motivo_length = len(motivo_clean)
 
             if motivo_length < 20:
-                raise UserError(
+                raise ValidationError(
                     _(
                         "Cancellation reason must be at least 20 characters long. Current length: %d characters."
                     )
@@ -64,7 +64,7 @@ class DgiAnulacionWizard(models.TransientModel):
                 )
 
             if motivo_length > 500:
-                raise UserError(
+                raise ValidationError(
                     _(
                         "Cancellation reason must not exceed 500 characters. Current length: %d characters."
                     )
@@ -97,8 +97,7 @@ class DgiAnulacionWizard(models.TransientModel):
             raise AccessError(_("Only accounting managers can cancel invoices in DGI."))
 
         move = self.move_id
-        move.check_access_rights("write")
-        move.check_access_rule("write")
+        move.check_access("write")
 
         if not move.dgi_sent:
             raise UserError(_("This invoice has not been sent to DGI yet."))
@@ -153,7 +152,7 @@ class DgiAnulacionWizard(models.TransientModel):
             "edi_error_message",
             "state",
         ])
-        if move.dgi_status != "anulado":
+        if not move._dgi_status_is("anulado"):
             error_message = html2plaintext(
                 move.edi_error_message or move.dgi_error_message or _("Unknown error")
             )

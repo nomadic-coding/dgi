@@ -51,12 +51,36 @@ class HkaApi(models.AbstractModel):
         """Get HKA configuration from the company (not database-wide ICP)."""
         company = self._get_company(company)
         return {
-            "api_url": company.hka_api_url or "",
+            "api_url": (company.hka_api_url or "").strip(),
             "usuario": company.hka_usuario or "",
             "clave": company.hka_clave or "",
             "timeout": int(company.hka_timeout or 30),
             "verify_ssl": bool(company.hka_verify_ssl),
+            "company_name": company.name,
         }
+
+    @api.model
+    def _check_config(self, config):
+        """Fail early with a clear message instead of a requests URL error."""
+        missing = []
+        if not config.get("api_url"):
+            missing.append(_("HKA API URL"))
+        if not config.get("usuario"):
+            missing.append(_("HKA Usuario"))
+        if not config.get("clave"):
+            missing.append(_("HKA Clave"))
+        if missing:
+            raise UserError(
+                _(
+                    "HKA electronic invoicing is not configured for company "
+                    "%(company)s. Missing: %(fields)s. Set them under "
+                    "Accounting > Configuration > Settings > Panama DGI."
+                )
+                % {
+                    "company": config.get("company_name") or "",
+                    "fields": ", ".join(missing),
+                }
+            )
 
     @api.model
     def _get_access_token(self, company=None):
@@ -106,6 +130,7 @@ class HkaApi(models.AbstractModel):
         Returns: JWT token as string
         """
         config = self._get_config(company=company)
+        self._check_config(config)
         auth_url = f"{config['api_url'].rstrip('/')}/api/Autenticacion"
 
         # During authentication, Authorization header is just the usuario (no "Bearer")
@@ -120,9 +145,7 @@ class HkaApi(models.AbstractModel):
             "clave": config["clave"],
         }
 
-        _logger.info(
-            "Authenticating with HKA API for user: %s", config["usuario"][:10] + "..."
-        )
+        _logger.info("Authenticating with HKA API for company %s", config["company_name"])
 
         try:
             response = requests.post(
@@ -210,6 +233,7 @@ class HkaApi(models.AbstractModel):
             tuple: (http_status_code, response_data)
         """
         config = self._get_config(company=company)
+        self._check_config(config)
         token = self._get_access_token(company=company)
 
         url = f"{config['api_url'].rstrip('/')}/{endpoint.lstrip('/')}"
@@ -268,6 +292,7 @@ class HkaApi(models.AbstractModel):
         Returns:
             dict with validation result
         """
+        self._check_hka_user_access()
         data = {
             "tipoRuc": str(tipo_ruc),
             "ruc": str(ruc),
@@ -289,7 +314,7 @@ class HkaApi(models.AbstractModel):
                 company=company or self.env.company,
             )
 
-            codigo = response.get("codigo", "")
+            codigo = str(response.get("codigo") or "")
             is_valid = codigo == "200"
             info_ruc = response.get("infoRuc", {})
             status = "success"
@@ -363,7 +388,7 @@ class HkaApi(models.AbstractModel):
                 }
             return {
                 "success": True,
-                "status": resultado or "procesado",
+                "status": (resultado or "procesado").strip().lower(),
                 "error_message": False,
                 **payload,
             }
@@ -434,19 +459,29 @@ class HkaApi(models.AbstractModel):
         }
 
         self._check_hka_user_access()
+        Log = self.env["hka.api.log"]
+        company = self._company_from_move(move_id)
+        document_key = Log._document_key_from_payload(document_data)
+        log_note = None
         try:
             _logger.info("Sending electronic document to HKA API")
             http_status_code, response = self._make_request(
                 "api/Enviar",
                 method="POST",
                 data=document_data,
-                company=self._company_from_move(move_id),
+                company=company,
             )
 
-            move = self.env["account.move"].browse(move_id) if move_id else None
-            parsed = self._parse_enviar_response(
-                response, move=move if move and move.exists() else None
-            )
+            parsed = self._parse_enviar_response(response)
+            if parsed.get("codigo") == "102":
+                recovered = self._recover_enviar_from_receipt(
+                    document_data, company, move_id=move_id
+                )
+                if recovered:
+                    parsed = recovered
+                    log_note = _(
+                        "HKA 102 (duplicate): CUFE recovered from HKA API log #%s."
+                    ) % recovered["recovered_from_log_id"]
             status = "success" if parsed["success"] else "error"
             error_message = parsed["error_message"] or None
             result = parsed
@@ -467,21 +502,87 @@ class HkaApi(models.AbstractModel):
             }
 
         finally:
-            # Log API call (automatically uses new cursor to survive transaction rollback)
+            # Committed on an independent cursor before the caller continues:
+            # if the sending transaction is rolled back afterwards, this row is
+            # the receipt that lets a retry recover the CUFE (HKA 102).
             duration = (time.time() - start_time) * 1000  # Convert to ms
-            self.env["hka.api.log"].log_api_call(
+            Log.log_api_call(
                 api_method="enviar",
                 request_data=document_data,
                 response_data=response,
                 status=status,
-                error_message=error_message,
+                error_message=error_message or log_note,
                 http_status_code=http_status_code,
                 duration_ms=duration,
                 move_id=move_id,
-                auto_commit=False,
+                document_key=document_key,
+                dgi_cufe=result.get("dgi_cufe") if result.get("success") else False,
             )
 
         return result
+
+    @api.model
+    def _enviar_payload_total(self, document_data):
+        documento = (document_data or {}).get("documento") or {}
+        totales = documento.get("totalesSubTotales") or {}
+        return str(totales.get("totalFactura") or "").strip()
+
+    @api.model
+    def _recover_enviar_from_receipt(self, document_data, company, move_id=None):
+        """HKA 102 (duplicate): reuse the CUFE of an Enviar HKA already accepted.
+
+        This happens when the transaction that received code 200 was rolled
+        back after the call (the detached log row is the only trace left).
+        Only recovers when the receipt is for the same document key, the same
+        totalFactura, and no other invoice already holds that CUFE.
+        Returns a result dict like ``_parse_enviar_response`` or None.
+        """
+        Log = self.env["hka.api.log"]
+        document_key = Log._document_key_from_payload(document_data)
+        receipt = Log._find_enviar_receipt(company, document_key)
+        if not receipt:
+            return None
+        sent_request, sent_response = receipt._enviar_receipt_payloads()
+        if self._enviar_payload_total(sent_request) != self._enviar_payload_total(
+            document_data
+        ):
+            _logger.warning(
+                "HKA 102 for %s but receipt log #%s has a different total; not recovering",
+                document_key,
+                receipt.id,
+            )
+            return None
+        cufe = sent_response.get("cufe") or receipt.dgi_cufe
+        if not cufe:
+            return None
+        other_domain = [("company_id", "=", company.id), ("dgi_cufe", "=", cufe)]
+        if move_id:
+            other_domain.append(("id", "!=", move_id))
+        if self.env["account.move"].sudo().search_count(other_domain):
+            _logger.warning(
+                "HKA 102 for %s: CUFE from receipt log #%s belongs to another invoice",
+                document_key,
+                receipt.id,
+            )
+            return None
+        _logger.info(
+            "HKA 102 for %s: recovering CUFE from receipt log #%s",
+            document_key,
+            receipt.id,
+        )
+        return {
+            "success": True,
+            "status": (sent_response.get("resultado") or "procesado").strip().lower(),
+            "error_message": False,
+            "dgi_cufe": cufe,
+            "dgi_qr": sent_response.get("qr") or False,
+            "dgi_fecha_recepcion": sent_response.get("fechaRecepcionDGI") or False,
+            "dgi_protocolo_autorizacion": sent_response.get("nroProtocoloAutorizacion")
+            or False,
+            "codigo": "102",
+            "mensaje": sent_response.get("mensaje") or "",
+            "recovered_from_log_id": receipt.id,
+        }
 
     @api.model
     @api.private
@@ -542,7 +643,7 @@ class HkaApi(models.AbstractModel):
             )
 
             # Parse response
-            codigo = response.get("codigo", "")
+            codigo = str(response.get("codigo") or "")
             resultado = response.get("resultado", "")
             mensaje = response.get("mensaje", "")
 
@@ -580,7 +681,8 @@ class HkaApi(models.AbstractModel):
             }
 
         finally:
-            # Log API call (automatically uses new cursor to survive transaction rollback)
+            # Logged on an independent cursor so the row survives the wizard's
+            # UserError rollback when HKA rejects the anulación.
             duration = (time.time() - start_time) * 1000  # Convert to ms
             self.env["hka.api.log"].log_api_call(
                 api_method="anular",
@@ -591,7 +693,6 @@ class HkaApi(models.AbstractModel):
                 http_status_code=http_status_code,
                 duration_ms=duration,
                 move_id=move_id,
-                auto_commit=False,
             )
 
         return result
@@ -706,7 +807,6 @@ class HkaApi(models.AbstractModel):
                 http_status_code=http_status_code,
                 duration_ms=duration,
                 move_id=move_id,
-                auto_commit=False,
             )
 
         return result

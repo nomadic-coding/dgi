@@ -12,4 +12,5 @@ from . import test_dgi_journal
 from . import test_dgi_live_hka
 from . import test_dgi_merge_rounding
 from . import test_dgi_mix_taxes
+from . import test_dgi_review_fixes
 from . import test_dgi_ruc_validation

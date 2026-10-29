@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from odoo import Command
+from odoo.exceptions import UserError
 from odoo.tests import tagged
 
 from .common import L10nPaEdiTestCommon
@@ -36,16 +37,20 @@ class TestL10nPaEdiMergeRounding(L10nPaEdiTestCommon):
         self._assert_hka_item_formula(item)
 
     def test_merge_seven_repeating_cents(self):
-        _invoice, item = self._merged_item([
-            {"name": "Line %s" % index, "quantity": 1, "price_unit": 0.33}
-            for index in range(7)
-        ])
-        self.assertEqual(item["precioItem"], "2.31")
-        self.assertEqual(item["cantidad"], "1.00")
-        self.assertEqual(item["precioUnitario"], "2.31")
-        # HKA taxes the merged net (2.31 * 7% = 0.16), not 7 * round(0.33 * 7%).
-        self.assertEqual(item["valorITBMS"], "0.16")
-        self._assert_hka_item_formula(item)
+        invoice = self._create_dgi_invoice(
+            partner=self.partner_contribuyente,
+            line_vals=[
+                {**self._default_invoice_line_vals(), **{
+                    "name": "Line %s" % index,
+                    "quantity": 1,
+                    "price_unit": 0.33,
+                }}
+                for index in range(7)
+            ],
+        )
+        with self.assertRaises(UserError) as error:
+            invoice._prepare_dgi_document_data()
+        self.assertIn("Merge same DGI code", error.exception.args[0])
 
     def test_merge_mixed_quantities_uneven_net(self):
         _invoice, item = self._merged_item([
@@ -69,26 +74,48 @@ class TestL10nPaEdiMergeRounding(L10nPaEdiTestCommon):
         self._assert_hka_item_formula(item)
 
     def test_merge_ten_split_across_three_lines(self):
-        _invoice, item = self._merged_item([
-            {"name": "Line A", "quantity": 1, "price_unit": 3.33},
-            {"name": "Line B", "quantity": 1, "price_unit": 3.33},
-            {"name": "Line C", "quantity": 1, "price_unit": 3.34},
-        ])
-        self.assertEqual(item["precioItem"], "10.00")
-        self.assertEqual(item["cantidad"], "1.00")
-        self.assertEqual(item["precioUnitario"], "10.00")
-        self._assert_hka_item_formula(item)
+        invoice = self._create_dgi_invoice(
+            partner=self.partner_contribuyente,
+            line_vals=[
+                {**self._default_invoice_line_vals(), **vals}
+                for vals in [
+                    {"name": "Line A", "quantity": 1, "price_unit": 3.33},
+                    {"name": "Line B", "quantity": 1, "price_unit": 3.33},
+                    {"name": "Line C", "quantity": 1, "price_unit": 3.34},
+                ]
+            ],
+        )
+        with self.assertRaises(UserError) as error:
+            invoice._prepare_dgi_document_data()
+        self.assertIn("Merge same DGI code", error.exception.args[0])
 
     def test_merge_one_cent_over_three(self):
-        _invoice, item = self._merged_item([
-            {"name": "Line A", "quantity": 1, "price_unit": 0.03},
-            {"name": "Line B", "quantity": 1, "price_unit": 0.03},
-            {"name": "Line C", "quantity": 1, "price_unit": 0.04},
+        invoice = self._create_dgi_invoice(
+            partner=self.partner_contribuyente,
+            line_vals=[
+                {**self._default_invoice_line_vals(), **vals}
+                for vals in [
+                    {"name": "Line A", "quantity": 1, "price_unit": 0.03},
+                    {"name": "Line B", "quantity": 1, "price_unit": 0.03},
+                    {"name": "Line C", "quantity": 1, "price_unit": 0.04},
+                ]
+            ],
+        )
+        with self.assertRaises(UserError) as error:
+            invoice._prepare_dgi_document_data()
+        self.assertIn("Merge same DGI code", error.exception.args[0])
+
+    def test_merge_matching_books_keeps_header_and_plazos(self):
+        invoice, item = self._merged_item([
+            {"name": "Line A", "quantity": 1, "price_unit": 10.00},
+            {"name": "Line B", "quantity": 1, "price_unit": 10.00},
         ])
-        self.assertEqual(item["precioItem"], "0.10")
-        self.assertEqual(item["cantidad"], "1.00")
-        self.assertEqual(item["precioUnitario"], "0.10")
-        self._assert_hka_item_formula(item)
+        payload = invoice._prepare_dgi_document_data()
+        totals = payload["documento"]["totalesSubTotales"]
+        self.assertEqual(item["valorITBMS"], "1.40")
+        self.assertEqual(totals["totalITBMS"], "1.40")
+        self.assertEqual(totals["totalFactura"], "{:.2f}".format(invoice.amount_total))
+        self._assert_hka_payload_matches_move(invoice, payload)
 
     def test_merge_discount_percent_lines_keep_formula(self):
         invoice = self._create_dgi_invoice(

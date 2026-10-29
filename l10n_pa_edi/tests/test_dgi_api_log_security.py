@@ -40,14 +40,16 @@ class TestL10nPaEdiApiLogSecurity(L10nPaEdiTestCommon):
         self.assertIn("200", log.response_data)
 
     def test_log_api_call_does_not_block_on_locked_invoice(self):
-        """Independent log cursor must not wait on the Enviar invoice row lock."""
+        """Detached logs carry no move FK, so they cannot wait on the Enviar
+        invoice row lock. (TransactionCase cannot open a real second
+        connection; this checks the row shape and the key-based linking.)"""
         invoice = self._create_dgi_invoice(partner=self.partner_contribuyente)
         self.env.cr.execute(
             "SELECT id FROM account_move WHERE id = %s FOR UPDATE",
             [invoice.id],
         )
         started = time.monotonic()
-        self.env["hka.api.log"].log_api_call(
+        log_id = self.env["hka.api.log"].log_api_call(
             api_method="enviar",
             request_data={"ok": True},
             response_data={"codigo": "200"},
@@ -56,6 +58,17 @@ class TestL10nPaEdiApiLogSecurity(L10nPaEdiTestCommon):
             auto_commit=True,
         )
         self.assertLess(time.monotonic() - started, 8)
+        self.assertTrue(log_id, "detached log row must be created")
+        log = self.env["hka.api.log"].browse(log_id)
+        self.assertFalse(log.move_id, "detached rows never carry the move FK")
+        self.assertEqual(
+            log.document_key,
+            self.env["hka.api.log"]._document_key_from_move(invoice),
+        )
+        self.assertEqual(log.document_number, invoice.name)
+        invoice.invalidate_recordset(["hka_api_log_count"])
+        self.assertEqual(invoice.hka_api_log_count, 1)
+        self.assertIn(log, self.env["hka.api.log"].search(invoice._hka_api_log_domain()))
         with self.env.registry.cursor() as cr:
             cr.execute(
                 """

@@ -129,15 +129,42 @@ class AccountJournal(models.Model):
                 _("Fiscal point cannot be zero. Use a value from 001 to 999.")
             )
 
+    DGI_SEQUENCE_PADDING = 10
+
     def _validate_dgi_sequence(self, journal):
-        """Validate that DGI sequence is configured."""
-        if not journal.dgi_sequence_id:
+        """DGI numbers are consecutive 10-digit numeroDocumentoFiscal values."""
+        sequence = journal.dgi_sequence_id
+        if not sequence:
             raise ValidationError(
                 _(
                     "DGI Invoice Sequence is required when DGI electronic invoicing is enabled. "
                     "Please configure a sequence for journal '%(journal)s'."
                 )
                 % {"journal": journal.name}
+            )
+        problems = []
+        if sequence.implementation != "no_gap":
+            problems.append(_("implementation must be 'No gap' (DGI numbers are consecutive)"))
+        if sequence.padding != self.DGI_SEQUENCE_PADDING:
+            problems.append(
+                _("sequence size must be %(size)d digits")
+                % {"size": self.DGI_SEQUENCE_PADDING}
+            )
+        if (sequence.prefix or "").strip() or (sequence.suffix or "").strip():
+            problems.append(_("prefix and suffix must be empty (digits only)"))
+        if sequence.use_date_range:
+            problems.append(_("subsequences per date range must be off"))
+        if problems:
+            raise ValidationError(
+                _(
+                    "DGI Invoice Sequence '%(sequence)s' of journal '%(journal)s' is not "
+                    "valid for numeroDocumentoFiscal: %(problems)s."
+                )
+                % {
+                    "sequence": sequence.name,
+                    "journal": journal.name,
+                    "problems": "; ".join(problems),
+                }
             )
 
     def _is_valid_numeric_code(self, code, expected_length):

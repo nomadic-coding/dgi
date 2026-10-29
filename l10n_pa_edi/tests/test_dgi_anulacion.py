@@ -102,6 +102,34 @@ class TestL10nPaEdiAnulacion(L10nPaEdiTestCommon):
         self.assertIn("processed in DGI", str(error.exception))
         self.assertEqual(invoice.state, "posted")
 
+    def test_anular_numeric_codigo_200_marks_anulado(self):
+        invoice = self._sent_invoice()
+        wizard = self._wizard(invoice)
+
+        def button_cancel(*args, **kwargs):
+            return True
+
+        with patch.object(
+            type(self.env["l10n_pa_edi.hka_api"]),
+            "_make_request",
+            return_value=(200, {
+                "codigo": 200,
+                "resultado": "Anulado",
+                "mensaje": "OK",
+            }),
+        ), patch.object(
+            type(invoice),
+            "button_cancel",
+            side_effect=button_cancel,
+        ), patch.object(
+            type(self.env["hka.api.log"]),
+            "log_api_call",
+            return_value=None,
+        ):
+            wizard.action_anular()
+
+        self.assertEqual(invoice.dgi_status, "anulado")
+
     def test_anular_rejected_after_182_hours(self):
         invoice = self._sent_invoice(invoice_date="2026-03-15")
         wizard = self._wizard(invoice)

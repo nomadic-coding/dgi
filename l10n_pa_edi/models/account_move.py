@@ -51,6 +51,7 @@ class AccountMove(models.Model):
     hka_tipo_documento_manual = fields.Boolean(
         string="Manual Document Type",
         default=False,
+        copy=False,
         help="If checked, the document type will not be auto-computed",
     )
 
@@ -70,7 +71,10 @@ class AccountMove(models.Model):
         inverse="_inverse_hka_tipo_documento",
         store=True,
         readonly=False,
-        help="Type of fiscal document (computed from invoice type, can be overridden)",
+        copy=False,
+        help="Type of fiscal document (computed from invoice type, can be overridden). "
+        "Not copied: a duplicate or a credit note recomputes it from its own "
+        "move type and receiver.",
     )
 
     @api.depends(
@@ -301,12 +305,18 @@ class AccountMove(models.Model):
             """
         )
 
+    def _dgi_status_is(self, *names):
+        """Case-insensitive dgi_status compare. Stored values are lowercased on write."""
+        self.ensure_one()
+        status = (self.dgi_status or "").strip().lower()
+        return status in {name.strip().lower() for name in names}
+
     @api.depends("edi_state", "dgi_status", "dgi_cufe")
     def _compute_dgi_sent(self):
         for move in self:
             accepted = (
                 move.edi_state in ("sent", "to_cancel", "cancelled")
-                or move.dgi_status in ("procesado", "anulado")
+                or move._dgi_status_is("procesado", "anulado")
             )
             move.dgi_sent = bool(move.dgi_cufe) and accepted
 
@@ -582,6 +592,9 @@ class AccountMove(models.Model):
     @api.private
     def _dgi_write_api_fields(self, vals):
         """Write DGI response fields. Not RPC-callable."""
+        vals = dict(vals)
+        if vals.get("dgi_status"):
+            vals["dgi_status"] = str(vals["dgi_status"]).strip().lower()
         return super().write(vals)
 
     def _dgi_commit_api_fields(self, vals):
@@ -596,7 +609,7 @@ class AccountMove(models.Model):
 
     def _is_dgi_anulado(self):
         """Check if invoice is canceled in DGI"""
-        return self.dgi_status == "anulado"
+        return self._dgi_status_is("anulado")
 
     def _dgi_emission_datetime_panama(self):
         """Emission timestamp sent to HKA: invoice date at 00:00 Panama time."""
@@ -646,15 +659,33 @@ class AccountMove(models.Model):
         """Require the DGI wizard while the invoice is still procesado in DGI."""
         super()._compute_need_cancel_request()
         for move in self:
-            if move.dgi_status == "anulado":
+            if move._dgi_status_is("anulado"):
                 move.need_cancel_request = False
-            elif move.dgi_status == "procesado" and move.dgi_sent:
+            elif move._dgi_status_is("procesado") and move.dgi_sent:
                 move.need_cancel_request = True
+
+    def _hka_api_log_domain(self):
+        """Logs of this invoice: linked by move_id, or detached rows (written on
+        their own cursor, no FK) that carry this invoice's HKA document key."""
+        self.ensure_one()
+        document_key = self.env["hka.api.log"]._document_key_from_move(self)
+        if not document_key:
+            return [("move_id", "=", self.id)]
+        return [
+            "|",
+            ("move_id", "=", self.id),
+            "&",
+            "&",
+            ("move_id", "=", False),
+            ("company_id", "=", self.company_id.id),
+            ("document_key", "=", document_key),
+        ]
 
     def _compute_hka_api_log_count(self):
         """Compute count of API logs for this invoice."""
+        Log = self.env["hka.api.log"].sudo()
         for move in self:
-            move.hka_api_log_count = self.env["hka.api.log"].search_count(
-                [("move_id", "=", move.id)]
+            move.hka_api_log_count = (
+                Log.search_count(move._hka_api_log_domain()) if move.id else 0
             )
 

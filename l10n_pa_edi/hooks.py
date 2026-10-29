@@ -38,7 +38,12 @@ def _migrate_hka_icp_to_company(env):
     if not vals:
         return
 
-    for company in env["res.company"].sudo().search([]):
+    # The legacy settings were one HKA account for the whole database. Only
+    # Panama companies can use it; never copy credentials onto the others.
+    companies = _panama_companies(env)
+    if not companies:
+        companies = env.ref("base.main_company", raise_if_not_found=False)
+    for company in companies or env["res.company"]:
         if company.hka_usuario or company.hka_clave:
             continue
         company.write(vals)
@@ -53,6 +58,13 @@ def _migrate_hka_icp_to_company(env):
         "l10n_pa_edi.hka_auth_token_expiry",
     ):
         ICP.set_param(key, False)
+
+
+def _panama_companies(env):
+    """Companies whose fiscal country is Panama (the only ones HKA applies to)."""
+    return env["res.company"].sudo().search([
+        ("account_fiscal_country_id.code", "=", "PA"),
+    ])
 
 
 def _auto_map_dgi_catalogs(env):
@@ -95,9 +107,12 @@ def _auto_map_dgi_catalogs(env):
 
 
 def _auto_map_l10n_pa_taxes(env):
-    """Map the official Panama 7% sale ITBMS to HKA code 01 when empty."""
+    """Map the official Panama 7% sale ITBMS to HKA code 01 when empty.
+
+    Only for Panama companies: a 7% sale tax elsewhere is not ITBMS.
+    """
     Tax = env["account.tax"].sudo()
-    for company in env["res.company"].search([]):
+    for company in _panama_companies(env):
         tax = env.ref(f"account.{company.id}_ITAX_19", raise_if_not_found=False)
         if tax and not tax.hka_tax_code:
             tax.hka_tax_code = "01"
@@ -173,7 +188,7 @@ def _backfill_hka_edi_documents(env):
         {
             "move_id": move.id,
             "edi_format_id": edi_format.id,
-            "state": "cancelled" if move.dgi_status == "anulado" else "sent",
+            "state": "cancelled" if move._dgi_status_is("anulado") else "sent",
         }
         for move in sent_moves
     ]
@@ -202,9 +217,29 @@ def _backfill_hka_edi_documents(env):
         env["account.edi.document"].create(to_create)
 
 
+def _normalize_dgi_status_case(env):
+    """Store HKA resultado in lowercase so XML domains match procesado/anulado."""
+    env.cr.execute(
+        """
+        UPDATE account_move
+           SET dgi_status = LOWER(TRIM(dgi_status))
+         WHERE dgi_status IS NOT NULL
+           AND dgi_status != ''
+           AND dgi_status != LOWER(TRIM(dgi_status))
+        """
+    )
+
+
+def _backfill_hka_log_document_keys(env):
+    """Give pre-existing HKA logs the document key used for detached logging."""
+    env["hka.api.log"]._backfill_document_keys()
+
+
 def post_init_hook(env):
     _migrate_hka_icp_to_company(env)
     _auto_map_dgi_catalogs(env)
     _auto_map_l10n_pa_taxes(env)
     _enable_hka_edi_on_dgi_journals(env)
+    _normalize_dgi_status_case(env)
     _backfill_hka_edi_documents(env)
+    _backfill_hka_log_document_keys(env)

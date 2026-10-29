@@ -3,6 +3,7 @@
 from unittest.mock import patch
 
 import requests
+from odoo.exceptions import UserError
 from odoo.tests import tagged
 
 from .common import L10nPaEdiTestCommon
@@ -214,6 +215,18 @@ class TestL10nPaEdiAutoSend(L10nPaEdiTestCommon):
         self.assertEqual(invoice.dgi_status, "procesado")
         self.assertFalse(invoice.dgi_cufe)
         self.assertFalse(invoice.dgi_sent)
+
+    def test_mixed_case_dgi_status_is_normalized(self):
+        invoice = self._create_dgi_invoice(partner=self.partner_contribuyente)
+        invoice._dgi_write_api_fields({
+            "dgi_status": "Procesado",
+            "dgi_cufe": "CUFE-CASE",
+        })
+        self.assertEqual(invoice.dgi_status, "procesado")
+        self.assertTrue(invoice.dgi_sent)
+        self.assertTrue(invoice._need_cancel_request())
+        with self.assertRaises(UserError):
+            invoice.button_cancel()
 
     def test_enviar_200_without_cufe_is_not_success(self):
         invoice = self._create_dgi_invoice(partner=self.partner_contribuyente)

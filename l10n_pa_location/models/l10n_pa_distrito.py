@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from odoo import _, api, fields, models
-from odoo.exceptions import ValidationError
+from odoo import api, fields, models
 
 
 class L10nPaDistrito(models.Model):
@@ -68,19 +67,6 @@ class L10nPaDistrito(models.Model):
                 distrito.complete_name = f"{distrito.state_id.name} / {distrito.name}"
             else:
                 distrito.complete_name = distrito.name
-
-    @api.constrains("code", "state_id")
-    def _check_unique_code_per_state(self):
-        for distrito in self:
-            domain = [
-                ("code", "=", distrito.code),
-                ("state_id", "=", distrito.state_id.id),
-                ("id", "!=", distrito.id),
-            ]
-            if self.search_count(domain) > 0:
-                raise ValidationError(
-                    _("District code must be unique within the province!")
-                )
 
     _sql_constraints = [
         (

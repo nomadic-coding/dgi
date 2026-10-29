@@ -51,7 +51,7 @@ class AccountEdiFormat(models.Model):
         return {move: self._l10n_pa_edi_post_invoice_one(move) for move in moves}
 
     def _l10n_pa_edi_post_invoice_one(self, move):
-        if move.dgi_cufe and move.dgi_status in ("procesado", "anulado"):
+        if move.dgi_cufe and move._dgi_status_is("procesado", "anulado"):
             return {"success": True}
 
         try:
@@ -84,7 +84,7 @@ class AccountEdiFormat(models.Model):
         return {move: self._l10n_pa_edi_cancel_invoice_one(move) for move in moves}
 
     def _l10n_pa_edi_cancel_invoice_one(self, move):
-        if move.dgi_status == "anulado":
+        if move._dgi_status_is("anulado"):
             return {"success": True}
 
         motivo = (move.hka_motivo_anulacion or "").strip()

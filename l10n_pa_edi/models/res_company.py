@@ -17,8 +17,10 @@ class ResCompany(models.Model):
 
     hka_api_url = fields.Char(
         string="HKA API URL",
-        default="https://demointegracion.thefactoryhka.com.pa",
-        help="The Factory HKA API endpoint URL",
+        help="The Factory HKA API endpoint URL. No default: pick the demo "
+        "(https://demointegracion.thefactoryhka.com.pa) or the production "
+        "endpoint explicitly so a new company never invoices against the "
+        "wrong environment.",
     )
     hka_usuario = fields.Char(
         string="HKA Usuario",

@@ -16,6 +16,8 @@ LIST_ITEM_TAGS = {
     "listaDocsFiscalReferenciados": "docFiscalReferenciado",
 }
 
+FIXTURE_CUFE_66 = "A" * 66
+
 
 class L10nPaEdiTestCommon(AccountTestInvoicingCommon):
     """Shared Panama DGI / HKA fixtures. Does not call the real HKA API."""
@@ -266,6 +268,15 @@ class L10nPaEdiTestCommon(AccountTestInvoicingCommon):
     def _zero_rate_invoice_line_vals(cls, **overrides):
         return cls._invoice_line_vals_for_tax(cls.tax_itbms_0, **overrides)
 
+    def _require_sale(self):
+        """l10n_pa_edi does not depend on sale; skip sale-only scenarios without it."""
+        installed = self.env["ir.module.module"].sudo().search_count([
+            ("name", "=", "sale"),
+            ("state", "=", "installed"),
+        ])
+        if not installed:
+            self.skipTest("The sale module is not installed")
+
     def _create_sale_final_invoice_with_downpayment(
         self,
         partner=None,
@@ -274,6 +285,7 @@ class L10nPaEdiTestCommon(AccountTestInvoicingCommon):
         downpayment_percent=20.0,
     ):
         """Confirm a 1000 service SO, invoice a % down payment, then the deducted remainder."""
+        self._require_sale()
         partner = partner or self.partner_contribuyente
         self.product_service.invoice_policy = "order"
         sale_order = self.env["sale.order"].create({
@@ -394,6 +406,9 @@ class L10nPaEdiTestCommon(AccountTestInvoicingCommon):
             sum(float(item["valorTotal"]) for item in items),
             float(totales["totalFactura"]),
         )
+        header_tax = float(totales["totalITBMS"]) + float(totales.get("totalISC") or 0)
+        self.assertAlmostEqual(header_tax, move.amount_tax)
+        self.assertAlmostEqual(float(totales["totalFactura"]), move.amount_total)
         for item in items:
             self._assert_hka_item_formula(item)
         return payload

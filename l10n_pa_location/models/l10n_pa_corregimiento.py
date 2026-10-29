@@ -79,19 +79,6 @@ class L10nPaCorregimiento(models.Model):
             else:
                 corregimiento.complete_name = corregimiento.name
 
-    @api.constrains("codigo_ubicacion")
-    def _check_unique_codigo_ubicacion(self):
-        for corregimiento in self:
-            domain = [
-                ("codigo_ubicacion", "=", corregimiento.codigo_ubicacion),
-                ("id", "!=", corregimiento.id),
-            ]
-            if self.search_count(domain) > 0:
-                raise ValidationError(
-                    _("CODIGO_UBICACION must be unique! Code %s already exists.")
-                    % corregimiento.codigo_ubicacion
-                )
-
     @api.constrains("codigo_ubicacion", "distrito_id", "state_id")
     def _check_codigo_ubicacion_format(self):
         """Validate that codigo_ubicacion matches the hierarchy"""

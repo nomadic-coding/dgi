@@ -2,7 +2,7 @@
 
 import logging
 from collections import defaultdict
-from datetime import datetime, time
+from datetime import datetime, time, timedelta, timezone
 
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
@@ -15,6 +15,8 @@ from odoo.addons.l10n_pa_edi.models.hka_combinations import (
 )
 
 _logger = logging.getLogger(__name__)
+
+PANAMA_TZ = timezone(timedelta(hours=-5))
 
 HKA_ITBMS_RATES = {
     "00": 0.0,
@@ -29,10 +31,18 @@ class L10nPaEdiPayload(models.AbstractModel):
     _description = "Panama HKA Enviar payload"
 
     def _format_dgi_datetime(self, date_value):
-        """Format a date/datetime as DGI ISO 8601 with Panama timezone (UTC-5)."""
+        """Format a date/datetime as DGI ISO 8601 with Panama timezone (UTC-5).
+
+        Dates are sent as midnight Panama time. Naive datetimes are Odoo
+        values, i.e. UTC, and are converted to Panama wall time first.
+        """
         if not date_value:
             date_value = fields.Date.today()
-        if not isinstance(date_value, datetime):
+        if isinstance(date_value, datetime):
+            if date_value.tzinfo is None:
+                date_value = date_value.replace(tzinfo=timezone.utc)
+            date_value = date_value.astimezone(PANAMA_TZ)
+        else:
             date_value = datetime.combine(date_value, time.min)
         return date_value.strftime('%Y-%m-%dT%H:%M:%S-05:00')
 
@@ -201,6 +211,36 @@ class L10nPaEdiPayload(models.AbstractModel):
         total_itbms = move.currency_id.round(sum((t for _, _, t in itbms_rows)))
         total_isc = move.currency_id.round(sum((t for _, _, t in isc_rows)))
         return {'itbms_rows': itbms_rows, 'isc_rows': isc_rows, 'total_itbms': total_itbms, 'total_isc': total_isc}
+
+    def _hka_validate_merged_items_match_books(self, move, items, tax_parsed):
+        """Merged line taxes keep the HKA formula; header must still match Odoo books."""
+        move.ensure_one()
+        if not items:
+            raise UserError(_('Cannot send to DGI: merged invoice has no line items.'))
+        cur = move.currency_id
+        rnd = cur.rounding or 0.01
+        sum_itbms = cur.round(sum(float(item.get('valorITBMS') or 0.0) for item in items))
+        sum_isc = cur.round(sum(float(item.get('valorISC') or 0.0) for item in items))
+        sum_total = cur.round(sum(float(item.get('valorTotal') or 0.0) for item in items))
+        checks = [
+            (sum_itbms, tax_parsed['total_itbms'], _('ITBMS')),
+            (sum_isc, tax_parsed['total_isc'], _('ISC')),
+            (sum_total, move.amount_total, _('total with tax')),
+        ]
+        for payload_amount, move_amount, label in checks:
+            if float_compare(payload_amount, move_amount, precision_rounding=rnd) != 0:
+                raise UserError(
+                    _(
+                        "Merged HKA payload does not match invoice %(label)s: "
+                        "payload=%(payload).2f, move=%(move_amount).2f. "
+                        "Turn off Merge same DGI code for this invoice."
+                    )
+                    % {
+                        'label': label,
+                        'payload': payload_amount,
+                        'move_amount': move_amount,
+                    }
+                )
 
     def _hka_validate_consolidated_items(self, move, items, tax_parsed):
         """Ensure consolidated listaItems match the move after rounding adjustments."""
@@ -611,6 +651,36 @@ class L10nPaEdiPayload(models.AbstractModel):
         else:
             item['tasaITBMS'] = '00'
         item.setdefault('valorITBMS', '0.00')
+        self._hka_ensure_item_formula(move, item)
+        return item
+
+    def _hka_item_formula_holds(self, move, item):
+        """HKA rejects items where cantidad * (precioUnitario - descuento) != precioItem.
+
+        Strict on purpose: the raw product must round to precioItem whatever
+        rounding mode the validator uses, so a half-cent difference (2.5 x
+        3.33 = 8.325 vs 8.33) does not pass.
+        """
+        qty = float(item.get('cantidad') or 0)
+        unit = float(item.get('precioUnitario') or 0)
+        discount = float(item.get('precioUnitarioDescuento') or 0)
+        precio = float(item.get('precioItem') or 0)
+        half_unit = (move.currency_id.rounding or 0.01) / 2.0
+        return abs(qty * (unit - discount) - precio) < half_unit - 1e-9
+
+    def _hka_ensure_item_formula(self, move, item):
+        """Fall back to quantity 1 x net price when the 2-decimal unit values drift.
+
+        Unit prices with more decimals than the currency, fractional discounts
+        (33.33 %) or 3-decimal quantities all round independently, so the HKA
+        identity can miss by a cent. The merged path already sends quantity 1;
+        do the same here instead of letting HKA reject the invoice.
+        """
+        if self._hka_item_formula_holds(move, item):
+            return item
+        item['cantidad'] = '1.00'
+        item['precioUnitario'] = item['precioItem']
+        item.pop('precioUnitarioDescuento', None)
         return item
 
     def _hka_positive_qty_lines_for_merge(self, move, lines):
@@ -724,8 +794,7 @@ class L10nPaEdiPayload(models.AbstractModel):
             merged_items = self._hka_prepare_merged_items_by_dgi_code(move, product_lines)
         if merged_items:
             lista_items = merged_items
-            total_itbms = move.currency_id.round(sum((float(item.get('valorITBMS') or 0.0) for item in lista_items)))
-            total_isc = move.currency_id.round(sum((float(item.get('valorISC') or 0.0) for item in lista_items)))
+            self._hka_validate_merged_items_match_books(move, lista_items, tax_parsed)
         elif consolidate_lines:
             lista_items = self._hka_prepare_consolidated_invoice_items(move, item_lines, tax_parsed)
         else:
@@ -733,7 +802,11 @@ class L10nPaEdiPayload(models.AbstractModel):
             self._hka_reconcile_lista_items_itbms(move, lista_items, product_lines, total_itbms)
         if not lista_items:
             raise UserError(_('Cannot send to DGI: invoice has no product lines for e-factura items.'))
-        hka_total = move.currency_id.round(move.amount_untaxed + total_itbms + total_isc)
+        hka_total = (
+            move.currency_id.round(move.amount_total)
+            if merged_items
+            else move.currency_id.round(move.amount_untaxed + total_itbms + total_isc)
+        )
         tiempo_pago = '2' if move.hka_forma_pago == '01' else '1'
         plazos = (
             self._hka_prepare_lista_pago_plazo(move, hka_total)
@@ -764,14 +837,15 @@ class L10nPaEdiPayload(models.AbstractModel):
                 export_vals['tipoDeCambio'] = '{:.4f}'.format(rate)
                 export_vals['montoMonedaExtranjera'] = '{:.4f}'.format(rate * move.amount_total)
             datos_transaccion['datosFacturaExportacion'] = export_vals
-        if move.hka_tipo_documento == '04' and move.reversed_entry_id:
+        if move.hka_tipo_documento == '04':
+            ref_errors = self._dgi_referenced_cufe_errors(move)
+            if ref_errors:
+                raise UserError('\n'.join(ref_errors))
             original_invoice = move.reversed_entry_id
-            if not original_invoice.invoice_date:
-                raise UserError(_('Cannot prepare credit note: Original invoice %s is missing invoice date') % original_invoice.name)
-            doc_referenciado = {'fechaEmisionDocFiscalReferenciado': self._format_dgi_datetime(original_invoice.invoice_date)}
-            if original_invoice.dgi_cufe:
-                doc_referenciado['cufeFEReferenciada'] = original_invoice.dgi_cufe
-            datos_transaccion['listaDocsFiscalReferenciados'] = [doc_referenciado]
+            datos_transaccion['listaDocsFiscalReferenciados'] = [{
+                'fechaEmisionDocFiscalReferenciado': self._format_dgi_datetime(original_invoice.invoice_date),
+                'cufeFEReferenciada': original_invoice.dgi_cufe,
+            }]
         documento = {'codigoSucursalEmisor': move.journal_id.dgi_codigo_sucursal_emisor, 'datosTransaccion': datos_transaccion, 'listaItems': lista_items, 'totalesSubTotales': totales_sub_totales}
         return {'documento': documento}
 
@@ -873,5 +947,11 @@ class L10nPaEdiPayload(models.AbstractModel):
     def _check_dgi_product_line_taxes(self, move):
         move.ensure_one()
         errors = self._dgi_product_line_tax_errors(move)
+        if errors:
+            raise UserError('\n'.join(errors))
+
+    def _check_dgi_credit_payment(self, move):
+        move.ensure_one()
+        errors = self._dgi_credit_payment_errors(move)
         if errors:
             raise UserError('\n'.join(errors))

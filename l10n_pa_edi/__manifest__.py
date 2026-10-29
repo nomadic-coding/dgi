@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     "name": "Panama - Electronic Invoicing",
-    "version": "18.0.1.1.0",
+    "version": "18.0.1.3.0",
     "category": "Accounting/Localizations/EDI",
     "summary": "Panama Electronic Invoicing with HKA API",
     "description": """
@@ -16,6 +16,7 @@ Features:
 * Customer management with DGI fields
 * Invoice preparation according to DGI requirements
 * Integration with l10n_pa_location for addresses
+* Sale down payments are deducted automatically when the Sales app is installed
 
 API Documentation: https://felwiki.thefactoryhka.com.pa/
     """,
@@ -24,7 +25,6 @@ API Documentation: https://felwiki.thefactoryhka.com.pa/
     "depends": [
         "account",
         "account_edi",
-        "sale",
         "l10n_pa",
         "l10n_pa_location",
         "l10n_pa_dgi_code_mapping",

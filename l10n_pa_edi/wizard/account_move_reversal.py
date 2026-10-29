@@ -4,18 +4,17 @@ from odoo import models
 
 
 class AccountMoveReversal(models.TransientModel):
-    """Override reversal wizard to set DGI document type for credit notes"""
+    """Override reversal wizard so credit notes get DGI document type 04"""
 
     _inherit = "account.move.reversal"
 
     def _prepare_default_reversal(self, move):
-        """Override to set hka_tipo_documento to '04' for credit notes"""
         res = super()._prepare_default_reversal(move)
-        
-        # If reversing a customer invoice (out_invoice), set document type to credit note (04)
-        if move.move_type == "out_invoice":
-            res["hka_tipo_documento"] = "04"  # Credit Note (E-bill)
-            res["hka_tipo_documento_manual"] = False  # Allow auto-computation
-        
-        return res
 
+        if move.move_type == "out_invoice":
+            # Do not pass hka_tipo_documento here: its inverse would flag the
+            # credit note as manual. With reversed_entry_id set, the compute
+            # yields 04 (Credit Note referencing the e-factura) on its own.
+            res["hka_tipo_documento_manual"] = False
+
+        return res

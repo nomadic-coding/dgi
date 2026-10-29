@@ -1,11 +1,10 @@
 from odoo import api, fields, models
-from odoo.osv import expression
 
 
 class DgiCodeMapping(models.Model):
     _name = "dgi.code.mapping"
     _description = "Panama DGI Code Mapping"
-    _rec_name = "display_name"
+    _rec_names_search = ["code", "name"]
 
     code = fields.Char(
         string="Code",
@@ -53,23 +52,3 @@ class DgiCodeMapping(models.Model):
                 record.display_name = f"[{record.code}] {record.name}"
             else:
                 record.display_name = record.name or ""
-
-    @api.model
-    def name_search(self, name="", args=None, operator="ilike", limit=100):
-        """Allow searching by code or name"""
-        if args is None:
-            args = []
-
-        if name:
-            name_domain = [
-                "|",
-                ("code", operator, name),
-                ("name", operator, name),
-            ]
-            domain = expression.AND([name_domain, args])
-        else:
-            domain = args
-
-        records = self.search(domain, limit=limit)
-        records.fetch(['display_name'])
-        return [(record.id, record.display_name) for record in records]

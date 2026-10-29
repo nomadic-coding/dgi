@@ -3,7 +3,7 @@
 from odoo.exceptions import UserError, ValidationError
 from odoo.tests import tagged
 
-from .common import L10nPaEdiTestCommon
+from .common import FIXTURE_CUFE_66, L10nPaEdiTestCommon
 
 
 @tagged("post_install_l10n", "post_install", "-at_install")
@@ -22,6 +22,7 @@ class TestL10nPaEdiHkaCombinations(L10nPaEdiTestCommon):
 
     def test_credit_note_uses_return_nature_and_hides_sale_type(self):
         invoice = self._create_dgi_invoice()
+        self._mark_dgi_sent(invoice, dgi_cufe=FIXTURE_CUFE_66)
         credit = self._create_dgi_invoice(
             move_type="out_refund",
             reversed_entry=invoice,
